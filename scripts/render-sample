@@ -2,12 +2,14 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-curl --location --request POST 'http://localhost:10011/generate' \
---header 'Content-Type: text/plain' \
---data-raw 'graph LR
+graph='graph LR
 
     A-->B
     B-->C
     C-->D
     C-->F
 '
+
+curl --location --request POST 'http://localhost:10011/generate' \
+--header 'Content-Type: text/plain' \
+--data-raw "$graph"

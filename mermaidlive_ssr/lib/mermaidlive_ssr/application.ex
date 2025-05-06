@@ -16,8 +16,8 @@ defmodule MermaidLiveSsr.Application do
         clustering() ++
         [
           {Phoenix.PubSub, name: MermaidLiveSsr.PubSub},
-          # Start a worker by calling: MermaidLiveSsr.Worker.start_link(arg)
-          # {MermaidLiveSsr.Worker, arg},
+          # Start MermaidServerClient as a globally registered service
+          {MermaidLiveSsr.MermaidServerClient, []},
           # Start to serve requests, typically the last entry
           MermaidLiveSsrWeb.Endpoint
         ]
