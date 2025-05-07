@@ -39,6 +39,11 @@ if config_env() == :prod do
 
   config :mermaidlive_ssr, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
+  mermaid_server_url =
+    System.get_env("MERMAID_SERVER_URL")
+
+  config :mermaidlive_ssr, :mermaid_server_url, mermaid_server_url
+
   config :mermaidlive_ssr, MermaidLiveSsrWeb.Endpoint,
     url: [host: host, port: port, path: context_path],
     http: [

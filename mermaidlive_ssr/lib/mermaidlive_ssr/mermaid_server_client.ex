@@ -6,16 +6,19 @@ defmodule MermaidLiveSsr.MermaidServerClient do
   use GenServer
   require Logger
 
-  # hardcoded for now
-  @server_url "http://localhost:10011/generate"
-
   ## Public API
 
   @doc """
   Starts the MermaidServerClient GenServer.
+
+  ## Options
+  - `:server_url` - The mermaid server url including /generate.
+
   """
-  def start_link(_opts) do
-    GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
+  def start_link(opts) do
+    server_url = Keyword.fetch!(opts, :server_url) || "http://localhost:10011/generate"
+    # Ensure the server_url is a valid URL
+    GenServer.start_link(__MODULE__, %{server_url: server_url}, name: __MODULE__)
   end
 
   @doc """
@@ -27,6 +30,13 @@ defmodule MermaidLiveSsr.MermaidServerClient do
   ## Returns
   - `{:ok, svg}` on success.
   - `{:error, reason}` on failure.
+
+  ## Example
+
+  ```
+  graph = "graph LR\nA-->B\nB-->C"
+  {:ok, svg} = MermaidLiveSsr.MermaidServerClient.render_graph(graph)
+  ```
   """
   def render_graph(graph) when is_binary(graph) do
     GenServer.call(__MODULE__, {:render_graph, graph})
@@ -35,15 +45,15 @@ defmodule MermaidLiveSsr.MermaidServerClient do
   ## GenServer Callbacks
 
   @impl true
-  def init(state) do
-    Logger.info("MermaidServerClient started")
+  def init(%{server_url: server_url} = state) do
+    Logger.info("MermaidServerClient started with server_url: #{server_url}")
     {:ok, state}
   end
 
   @impl true
-  def handle_call({:render_graph, graph}, _from, state) do
+  def handle_call({:render_graph, graph}, _from, %{server_url: server_url} = state) do
     response =
-      case Req.post(@server_url, body: graph, headers: [{"Content-Type", "text/plain"}]) do
+      case Req.post(server_url, body: graph, headers: [{"Content-Type", "text/plain"}]) do
         {:ok, %Req.Response{status: 200, body: body}} ->
           {:ok, body}
 

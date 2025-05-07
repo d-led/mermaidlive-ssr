@@ -9,6 +9,8 @@ defmodule MermaidLiveSsr.Application do
 
   @impl true
   def start(_type, _args) do
+    mermaid_server_url = Application.get_env(:mermaidlive_ssr, :mermaid_server_url)
+
     children =
       [
         MermaidLiveSsrWeb.Telemetry
@@ -16,9 +18,8 @@ defmodule MermaidLiveSsr.Application do
         clustering() ++
         [
           {Phoenix.PubSub, name: MermaidLiveSsr.PubSub},
-          # Start MermaidServerClient as a globally registered service
-          {MermaidLiveSsr.MermaidServerClient, []},
-          # Start to serve requests, typically the last entry
+          # Pass the server_url to MermaidServerClient
+          {MermaidLiveSsr.MermaidServerClient, server_url: mermaid_server_url},
           MermaidLiveSsrWeb.Endpoint
         ]
 
@@ -39,6 +40,7 @@ defmodule MermaidLiveSsr.Application do
   defp clustering() do
     dns_query = Application.get_env(:mermaidlive_ssr, :dns_cluster_query)
     Logger.info("DNS Cluster Query: #{inspect(dns_query)}")
+
     if dns_query do
       [
         {DNSCluster, query: Application.get_env(:mermaidlive_ssr, :dns_cluster_query) || :ignore}
