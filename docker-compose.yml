@@ -1,6 +1,7 @@
 services:
   mermaid-server:
     image: tomwright/mermaid-server:latest
+    hostname: mermaid-server.internal
     ports:
       - "10011:80"
 
@@ -10,9 +11,11 @@ services:
       dockerfile: Dockerfile
     hostname: mermaidlive-ssr.internal
     ports:
-      - "10010:4000"
+      - "10010:10010"
     environment:
       # mix phx.gen.secret 64
       - SECRET_KEY_BASE=$${SECRET_KEY_BASE:local-mvdFQorfNMybRBcmId3ChnRv6lzbjZRWcckMal4seVrf+4/3/dZ3dhiU7XMgESAE}
       - RELEASE_COOKIE=local-ICxIaPh1M
       - LOG_LEVEL=debug
+      - PORT=10010
+      - MERMAID_SERVER_URL=http://mermaid-server.internal/generate
