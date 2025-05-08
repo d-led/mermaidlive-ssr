@@ -11,6 +11,7 @@ kill_signal = 'SIGTERM'
 
 [env]
   PHX_HOST = 'mermaidlive-ssr.fly.dev'
+  MERMAID_SERVER_URL = 'http://mermaid-server.flycast/generate'
   PORT = '8080'
 
 [http_service]

@@ -47,3 +47,4 @@ erl_crash.dump
 Dockerfile
 docker-compose.yml
 .elixir_ls/
+fly.toml

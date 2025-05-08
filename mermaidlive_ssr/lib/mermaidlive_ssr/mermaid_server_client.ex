@@ -39,7 +39,7 @@ defmodule MermaidLiveSsr.MermaidServerClient do
   ```
   """
   def render_graph(graph) when is_binary(graph) do
-    GenServer.call(__MODULE__, {:render_graph, graph})
+    GenServer.call(__MODULE__, {:render_graph, graph}, 35_000)
   end
 
   ## GenServer Callbacks
@@ -53,7 +53,7 @@ defmodule MermaidLiveSsr.MermaidServerClient do
   @impl true
   def handle_call({:render_graph, graph}, _from, %{server_url: server_url} = state) do
     response =
-      case Req.post(server_url, body: graph, headers: [{"Content-Type", "text/plain"}]) do
+      case Req.post(server_url, body: graph, headers: [{"Content-Type", "text/plain"}], inet6: true, receive_timeout: 30_000) do
         {:ok, %Req.Response{status: 200, body: body}} ->
           {:ok, body}
 
