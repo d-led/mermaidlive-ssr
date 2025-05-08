@@ -2,12 +2,12 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-graph='graph LR
-
-    A-->B
-    B-->C
-    C-->D
-    C-->F
+graph='stateDiagram-v2
+      [*] --> waiting
+      waiting --> working : start
+      working --> aborting : abort
+      working --> waiting
+      aborting --> waiting
 '
 
 curl --location --request POST 'http://localhost:10011/generate' \

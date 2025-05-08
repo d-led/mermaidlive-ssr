@@ -58,7 +58,10 @@ defmodule MermaidLiveSsr.MermaidServerClient do
           {:ok, body}
 
         {:ok, %Req.Response{status: status, body: body}} ->
-          Logger.error("Failed to render graph. Status: #{status}, Body: #{body}")
+          Logger.error(
+            "Failed to render graph. Status: #{inspect(status)}, Body: #{inspect(body)}"
+          )
+
           {:error, :server_error}
 
         {:error, reason} ->

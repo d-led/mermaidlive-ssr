@@ -4,10 +4,27 @@ defmodule MermaidLiveSsrWeb.MainLive do
   @impl true
   def mount(_params, _session, socket) do
     if connected?(socket) do
-      # nothing for now
+      Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, "rendered_graphs")
+      send(self(), :fetch_last_rendered_diagram)
     end
 
-    {:ok, socket}
+    {:ok, assign(socket, diagram: "<strong>Nothing here yet...</strong>")}
+  end
+
+  @impl true
+  def handle_info(:fetch_last_rendered_diagram, socket) do
+    diagram =
+      case MermaidLiveSsr.FsmRendering.get_last_rendered_diagram() do
+        {:ok, diagram} -> diagram
+        _ -> "<strong>No diagram available<strong>"
+      end
+
+    {:noreply, assign(socket, diagram: diagram)}
+  end
+
+  @impl true
+  def handle_info({:rendered_graph, svg}, socket) do
+    {:noreply, assign(socket, diagram: svg)}
   end
 
   @impl true
@@ -16,6 +33,7 @@ defmodule MermaidLiveSsrWeb.MainLive do
     <div class="grid grid-cols-2 gap-4 w-full h-full">
       <div class="col-span-1 w-full border border-light-gray-300 p-4 relative">
         <div class="absolute -top-3 left-4 bg-white px-1">Graph</div>
+        {Phoenix.HTML.raw(@diagram)}
       </div>
       <div class="col-span-1 w-full border border-light-gray-300 p-4 relative">
         <div class="absolute -top-3 left-4 bg-white px-1">Intro</div>

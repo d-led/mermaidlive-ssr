@@ -20,6 +20,7 @@ defmodule MermaidLiveSsr.Application do
           {Phoenix.PubSub, name: MermaidLiveSsr.PubSub},
           # Pass the server_url to MermaidServerClient
           {MermaidLiveSsr.MermaidServerClient, server_url: mermaid_server_url},
+          MermaidLiveSsr.FsmRendering,
           MermaidLiveSsrWeb.Endpoint
         ]
 
