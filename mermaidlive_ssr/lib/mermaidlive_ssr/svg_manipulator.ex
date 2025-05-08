@@ -9,10 +9,7 @@ defmodule MermaidLiveSsr.SvgManipulator do
           {{old_width, old_height}, corrected_foreign_object} =
             g_element |> adjust_label_dimensions(width, height)
 
-          IO.inspect({old_width, old_height}, label: "OLD")
-          IO.inspect({width, height}, label: "NEW")
-          IO.inspect({div(height - old_height, 2), div(width - old_width, 2)}, label: "THEORY")
-          corrected_foreign_object |> adjust_text_position() |> IO.inspect(label: "CORRECTED")
+          corrected_foreign_object |> adjust_text_position()
         else
           _ ->
             g_element
@@ -23,11 +20,11 @@ defmodule MermaidLiveSsr.SvgManipulator do
     end)
     |> Floki.attr(".label foreignobject", "width", fn
       "0" -> "0"
-      string_value -> "#{String.to_integer(string_value) + 6}" |> IO.inspect(label: "WI")
+      string_value -> "#{to_int(string_value) + 6}"
     end)
     |> Floki.attr(".label foreignobject", "height", fn
       "0" -> "0"
-      string_value -> "#{String.to_integer(string_value) + 6}" |> IO.inspect(label: "HE")
+      string_value -> "#{to_int(string_value) + 6}"
     end)
     |> Floki.attr(".edgeLabel .label foreignobject", "transform", fn
       _ -> "translate(0,-4)"
@@ -59,7 +56,7 @@ defmodule MermaidLiveSsr.SvgManipulator do
 
   defp find_number(el, key) do
     with [string_value] <- Floki.attribute(el, key) do
-      {:ok, string_value |> String.to_integer()}
+      {:ok, string_value |> to_int()}
     else
       _ -> :not_found
     end
@@ -68,14 +65,14 @@ defmodule MermaidLiveSsr.SvgManipulator do
   defp adjust_label_dimensions(el, width, height) do
     old_width =
       with [ow] <- Floki.attribute(el, "foreignobject", "width") do
-        ow |> String.to_integer()
+        ow |> to_int()
       else
         _ -> width
       end
 
     old_height =
       with [oh] <- Floki.attribute(el, "foreignobject", "height") do
-        oh |> String.to_integer()
+        oh |> to_int()
       else
         _ -> height
       end
@@ -90,8 +87,13 @@ defmodule MermaidLiveSsr.SvgManipulator do
     el
     |> Floki.attr("g", "transform", fn value ->
       Regex.replace(~r/translate\((-?\d+),\s*(-?\d+)/, value, fn _, x, y ->
-        "translate(#{String.to_integer(x) - 2}, #{String.to_integer(y) - 2}"
+        "translate(#{to_int(x) - 2}, #{to_int(y) - 2}"
       end)
     end)
+  end
+
+  defp to_int(num_string) do
+    {num, ""} = Float.parse(num_string)
+    trunc(num)
   end
 end
