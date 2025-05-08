@@ -25,7 +25,7 @@ defmodule MermaidLiveSsr.FsmRendering do
 
   # Public API
   def get_last_rendered_diagram do
-    GenServer.call(__MODULE__, :get_last_rendered_diagram)
+    GenServer.call(__MODULE__, :get_last_rendered_diagram, 30_000)
   end
 
   @impl true
