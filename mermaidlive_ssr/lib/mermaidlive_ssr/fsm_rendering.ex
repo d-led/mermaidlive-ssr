@@ -3,6 +3,9 @@ defmodule MermaidLiveSsr.FsmRendering do
 
   require Logger
 
+  @fsm_updates_channel "fsm_updates"
+  @rendered_graph_channel "rendered_graph"
+
   def start_link(_) do
     Logger.info("Starting FsmRendering")
 
@@ -22,7 +25,9 @@ defmodule MermaidLiveSsr.FsmRendering do
 
   @impl true
   def init(state) do
+
     Process.send_after(self(), {:render_fsm, @waiting_state}, 10)
+    Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, @fsm_updates_channel)
 
     {:ok,
      Map.merge(
@@ -45,11 +50,9 @@ defmodule MermaidLiveSsr.FsmRendering do
 
     case rendered_graph do
       {:ok, svg} ->
-        Logger.info("Rendered FSM successfully.")
-
         Phoenix.PubSub.broadcast(
           MermaidLiveSsr.PubSub,
-          "rendered_graphs",
+          @rendered_graph_channel,
           {:rendered_graph, svg}
         )
 
@@ -59,6 +62,11 @@ defmodule MermaidLiveSsr.FsmRendering do
         Logger.error("Failed to render FSM: #{inspect(reason)}")
         {:noreply, state}
     end
+  end
+
+  @impl true
+  def handle_info({:new_state, fsm_state}, state) do
+    handle_info({:render_fsm, fsm_state}, state)
   end
 
   @impl true

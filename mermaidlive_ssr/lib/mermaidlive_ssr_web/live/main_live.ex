@@ -1,10 +1,12 @@
 defmodule MermaidLiveSsrWeb.MainLive do
   use MermaidLiveSsrWeb, :live_view
 
+  @rendered_graph_channel "rendered_graph"
+
   @impl true
   def mount(_params, _session, socket) do
     if connected?(socket) do
-      Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, "rendered_graphs")
+      Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, @rendered_graph_channel)
       send(self(), :fetch_last_rendered_diagram)
     end
 

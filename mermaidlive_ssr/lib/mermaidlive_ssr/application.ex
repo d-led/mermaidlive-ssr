@@ -16,7 +16,7 @@ defmodule MermaidLiveSsr.Application do
         clustering() ++
         [
           {Phoenix.PubSub, name: MermaidLiveSsr.PubSub},
-          # Pass the server_url to MermaidServerClient
+          MermaidLiveSsr.FSM,
           MermaidLiveSsr.FsmRendering,
           MermaidLiveSsrWeb.Endpoint
         ]

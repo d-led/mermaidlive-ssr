@@ -17,7 +17,7 @@ defmodule MermaidliveSsr.PreRenderedSvg do
 
   def get_static_svg(name) do
     case @static_cache[name] do
-      nil -> {:error, :not_found}
+      nil -> {:error, {:not_found, name}}
       svg -> {:ok, svg}
     end
   end
