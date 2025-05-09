@@ -18,4 +18,3 @@ services:
       - RELEASE_COOKIE=local-ICxIaPh1M
       - LOG_LEVEL=debug
       - PORT=10010
-      - MERMAID_SERVER_URL=http://mermaid-server.internal/generate

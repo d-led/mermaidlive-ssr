@@ -1,0 +1,48 @@
+#!/bin/bash
+set -euo pipefail
+IFS=$'\n\t'
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+cd "$SCRIPT_DIR/../mermaidlive_ssr/priv/pre-rendering/"
+
+npm install
+
+stateless_states=(
+  waiting
+  aborting
+)
+
+template='stateDiagram-v2
+  [*] --> waiting
+  waiting --> working : start
+  working --> aborting : abort
+  working --> waiting
+  aborting --> waiting
+  classDef inProgress font-style:italic, stroke-dasharray: 5 5, stroke-width:3px;
+  class ${state} inProgress
+  ${notes}'
+
+# loop over all stateless states and generate the SVGs
+for state in "${stateless_states[@]}"; do
+  echo "Pre-rendering $state"
+  export state
+  export notes=""
+  eval "input=\"$template\""
+  export input
+  export output="output/$state.svg"
+  npm run pre-render
+done
+
+# loop from 1 to 10 inclusively and echo the number
+for i in {1..10}; do
+  echo "Pre-rendering working-$i"
+  export state="working"
+  export notes="note left of working
+        ${i}
+  end note"
+  eval "input=\"$template\""
+  export input
+  export output="output/${state}-${i}.svg"
+  npm run pre-render
+done

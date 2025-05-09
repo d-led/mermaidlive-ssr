@@ -1,4 +1,5 @@
 defmodule MermaidLiveSsr.SvgManipulator do
+  # not needed for now as a newer version of mermaid-cli is used
   def fix_node_text_dimensions(svg) do
     svg
     |> Floki.parse_document!()
@@ -6,7 +7,7 @@ defmodule MermaidLiveSsr.SvgManipulator do
       {"g", g_attrs, children} = g_element ->
         with true <- is_state(g_attrs),
              {width, height} <- find_rect_dimensions(children) do
-          {{old_width, old_height}, corrected_foreign_object} =
+          {{_old_width, _old_height}, corrected_foreign_object} =
             g_element |> adjust_label_dimensions(width, height)
 
           corrected_foreign_object |> adjust_text_position()

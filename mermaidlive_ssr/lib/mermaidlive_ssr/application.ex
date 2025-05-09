@@ -9,8 +9,6 @@ defmodule MermaidLiveSsr.Application do
 
   @impl true
   def start(_type, _args) do
-    mermaid_server_url = Application.get_env(:mermaidlive_ssr, :mermaid_server_url)
-
     children =
       [
         MermaidLiveSsrWeb.Telemetry
@@ -19,7 +17,6 @@ defmodule MermaidLiveSsr.Application do
         [
           {Phoenix.PubSub, name: MermaidLiveSsr.PubSub},
           # Pass the server_url to MermaidServerClient
-          {MermaidLiveSsr.MermaidServerClient, server_url: mermaid_server_url},
           MermaidLiveSsr.FsmRendering,
           MermaidLiveSsrWeb.Endpoint
         ]
