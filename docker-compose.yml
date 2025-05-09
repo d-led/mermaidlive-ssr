@@ -1,10 +1,4 @@
 services:
-  mermaid-server:
-    image: tomwright/mermaid-server:latest
-    hostname: mermaid-server.internal
-    ports:
-      - "10011:80"
-
   mermaidlive-ssr:
     build:
       context: mermaidlive_ssr
