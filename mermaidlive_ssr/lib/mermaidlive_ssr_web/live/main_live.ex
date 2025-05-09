@@ -39,8 +39,8 @@ defmodule MermaidLiveSsrWeb.MainLive do
       </div>
       <div class="col-span-1 w-full border border-light-gray-300 p-4 relative">
         <div class="absolute -top-3 left-4 bg-white px-1">Intro</div>
-        <p>Click on the edges (guards) to interact with the state machine.</p>
-        <p>State machine is local to the server replica.</p>
+        <%!-- <p>Click on the edges (guards) to interact with the state machine.</p> --%>
+        <%!-- <p>State machine is local to the server replica.</p> --%>
         <p>Open the page in multiple browsers and observe interactive changes.</p>
         <p>Go offline and back online to experiment with re-connection.</p>
       </div>
