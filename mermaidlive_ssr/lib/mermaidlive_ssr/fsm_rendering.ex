@@ -66,7 +66,7 @@ defmodule MermaidLiveSsr.FsmRendering do
 
         {:noreply, %{state | last_rendered_diagram: fixed_svg, last_state_seen: fsm_state}}
 
-        {:error, %Req.TransportError{reason: :timeout}}
+      {:error, %Req.TransportError{reason: :timeout}} ->
         Logger.error("Failed to render FSM due to time-out, retrying...")
         Process.send_after(self(), {:render_fsm}, 3_000)
         {:noreply, state}
