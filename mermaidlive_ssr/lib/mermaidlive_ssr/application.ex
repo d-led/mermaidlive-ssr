@@ -16,7 +16,7 @@ defmodule MermaidLiveSsr.Application do
         clustering() ++
         [
           {Phoenix.PubSub, name: MermaidLiveSsr.PubSub},
-          MermaidLiveSsr.FSM,
+          MermaidLiveSsr.CountdownFSM,
           MermaidLiveSsr.FsmRendering,
           MermaidLiveSsrWeb.Endpoint
         ]

@@ -1,4 +1,4 @@
-defmodule MermaidLiveSsr.FSM do
+defmodule MermaidLiveSsr.CountdownFSM do
   @behaviour :gen_statem
 
   @fsm_updates_channel "fsm_updates"
