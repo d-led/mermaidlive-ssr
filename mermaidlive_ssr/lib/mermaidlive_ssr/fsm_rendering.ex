@@ -25,7 +25,6 @@ defmodule MermaidLiveSsr.FsmRendering do
 
   @impl true
   def init(state) do
-
     Process.send_after(self(), {:render_fsm, @waiting_state}, 10)
     Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, @fsm_updates_channel)
 

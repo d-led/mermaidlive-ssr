@@ -53,7 +53,7 @@ defmodule MermaidLiveSsr.FSM do
   end
 
   def working(:state_timeout, :tick, count) when count > 1 do
-    publish_state_change({:working, count-1})
+    publish_state_change({:working, count - 1})
     {:keep_state, count - 1, {:state_timeout, 1_000, :tick}}
   end
 
