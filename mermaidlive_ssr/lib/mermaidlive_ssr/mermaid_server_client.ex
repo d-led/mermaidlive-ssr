@@ -53,7 +53,12 @@ defmodule MermaidLiveSsr.MermaidServerClient do
   @impl true
   def handle_call({:render_graph, graph}, _from, %{server_url: server_url} = state) do
     response =
-      case Req.post(server_url, body: graph, headers: [{"Content-Type", "text/plain"}], inet6: true, receive_timeout: 30_000) do
+      case Req.post(server_url,
+             body: graph,
+             headers: [{"Content-Type", "text/plain"}],
+             inet6: true,
+             receive_timeout: 30_000
+           ) do
         {:ok, %Req.Response{status: 200, body: body}} ->
           {:ok, body}
 
