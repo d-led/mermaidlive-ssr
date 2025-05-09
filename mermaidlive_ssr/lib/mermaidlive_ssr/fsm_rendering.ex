@@ -43,6 +43,11 @@ defmodule MermaidLiveSsr.FsmRendering do
   end
 
   @impl true
+  def handle_info({:render_fsm}, %{last_state_seen: last_state_seen} = state) do
+    handle_info({:render_fsm, last_state_seen}, state)
+  end
+
+  @impl true
   def handle_info({:render_fsm, fsm_state}, %{server_client_module: server_client_module} = state) do
     input = mermaid_definition_for_state(fsm_state)
     rendered_graph = server_client_module.render_graph(input)
@@ -60,6 +65,11 @@ defmodule MermaidLiveSsr.FsmRendering do
         )
 
         {:noreply, %{state | last_rendered_diagram: fixed_svg, last_state_seen: fsm_state}}
+
+        {:error, %Req.TransportError{reason: :timeout}}
+        Logger.error("Failed to render FSM due to time-out, retrying...")
+        Process.send_after(self(), {:render_fsm}, 3_000)
+        {:noreply, state}
 
       {:error, reason} ->
         Logger.error("Failed to render FSM: #{inspect(reason)}")
