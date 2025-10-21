@@ -31,21 +31,17 @@ defmodule MermaidLiveSsrWeb.MainLive do
     fsm_channel = get_fsm_channel(fsm_ref)
     pubsub_channel = get_pubsub_channel(params, socket.assigns)
 
-    # Initialize ETS table for visitor counter if it doesn't exist
-    case :ets.whereis(:visitor_counter) do
-      :undefined ->
-        :ets.new(:visitor_counter, [:named_table, :public, :set])
-        :ets.insert(:visitor_counter, {:total, 0})
-      _ -> :ok
-    end
-
     if connected?(socket) do
       # Subscribe to the FSM-specific channel for state changes
       Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, fsm_channel)
       # Subscribe to global events channel
       Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, "events")
+      # Subscribe to presence updates
+      Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, "presence_updates")
       # Track this visitor
       track_visitor(socket)
+      # Load initial values
+      send(self(), :load_initial_values)
       send(self(), {:fetch_last_rendered_diagram, fsm_ref})
     end
 
@@ -197,15 +193,25 @@ defmodule MermaidLiveSsrWeb.MainLive do
   end
 
   @impl true
-  def handle_info({:presence_diff, _}, socket) do
-    # Update visitor counts when presence changes
-    update_visitor_counts(socket)
+  def handle_info(:load_initial_values, socket) do
+    # Load initial visitor counts
+    active_count = MermaidLiveSsr.VisitorTracker.get_active_count()
+    total_count = MermaidLiveSsr.VisitorTracker.get_total_count()
+
+    {:noreply,
+     socket
+     |> assign(:visitors_active, active_count)
+     |> assign(:visitors_cluster, active_count)
+     |> assign(:total_visitors, total_count)}
   end
 
   @impl true
-  def handle_info({:presence_state, _}, socket) do
-    # Update visitor counts when presence state is received
-    update_visitor_counts(socket)
+  def handle_info({:presence_update, %{active_count: active, total_count: total, cluster_count: cluster}}, socket) do
+    {:noreply,
+     socket
+     |> assign(:visitors_active, active)
+     |> assign(:visitors_cluster, cluster)
+     |> assign(:total_visitors, total)}
   end
 
   @impl true
@@ -259,6 +265,8 @@ defmodule MermaidLiveSsrWeb.MainLive do
   # Track visitor using Phoenix Presence
   defp track_visitor(_socket) do
     visitor_id = "visitor_#{System.unique_integer([:positive])}"
+
+    # Track in Presence - this will trigger presence_diff events
     MermaidLiveSsrWeb.Presence.track(
       self(),
       "visitors",
@@ -268,37 +276,9 @@ defmodule MermaidLiveSsrWeb.MainLive do
         pid: self()
       }
     )
-
-    # Increment total visitors counter
-    Phoenix.PubSub.broadcast(
-      MermaidLiveSsr.PubSub,
-      "events",
-      {:total_visitors, get_total_visitors() + 1}
-    )
-  end
-
-  # Simple in-memory counter for total visitors (in production, use persistent storage)
-  defp get_total_visitors do
-    case :ets.lookup(:visitor_counter, :total) do
-      [{:total, count}] -> count
-      [] -> 0
-    end
   end
 
 
-  # Update visitor counts from presence
-  defp update_visitor_counts(socket) do
-    presences = MermaidLiveSsrWeb.Presence.list("visitors")
-    active_count = map_size(presences)
-
-    # For now, cluster count is same as active count (single replica)
-    cluster_count = active_count
-
-    {:noreply,
-     socket
-     |> assign(:visitors_active, active_count)
-     |> assign(:visitors_cluster, cluster_count)}
-  end
 
   @impl true
   def handle_event("start", _params, socket) do
