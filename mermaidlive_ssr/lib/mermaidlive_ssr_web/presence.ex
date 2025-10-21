@@ -18,7 +18,7 @@ defmodule MermaidLiveSsrWeb.Presence do
   def handle_metas(_topic, %{joins: _joins, leaves: _leaves}, presences, state) do
     # Calculate and broadcast presence updates
     active_count = map_size(presences)
-    
+
     # Broadcast to presence channel for LiveView updates
     Phoenix.PubSub.broadcast(
       MermaidLiveSsr.PubSub,

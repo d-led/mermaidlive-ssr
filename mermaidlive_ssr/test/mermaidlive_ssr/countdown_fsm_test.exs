@@ -1,5 +1,5 @@
 defmodule MermaidLiveSsr.CountdownFSMTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   describe "CountdownFSM Unit Tests" do
     setup do

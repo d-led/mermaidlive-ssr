@@ -1,5 +1,5 @@
 defmodule MermaidLiveSsr.VisitorTrackerTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   describe "VisitorTracker" do
     setup do

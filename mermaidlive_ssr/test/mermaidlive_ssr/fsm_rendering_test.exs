@@ -1,5 +1,5 @@
 defmodule MermaidLiveSsr.FsmRenderingTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   describe "FSM Core States (based on Go version)" do
     setup do

@@ -1,5 +1,5 @@
 defmodule MermaidLiveSsrWeb.MainLiveTest do
-  use MermaidLiveSsrWeb.ConnCase, async: false
+  use MermaidLiveSsrWeb.ConnCase, async: true
   import Phoenix.LiveViewTest
 
   describe "MainLive Integration Tests" do
