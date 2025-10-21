@@ -198,12 +198,6 @@ defmodule MermaidLiveSsrWeb.MainLive do
     presences = MermaidLiveSsrWeb.Presence.list("visitors")
     active_count = map_size(presences)
     
-    # Get total count from ETS table
-    total_count = case :ets.whereis(:visitor_counter) do
-      :undefined -> active_count
-      _ -> :ets.lookup_element(:visitor_counter, :total, 2)
-    end
-    
     # Get current FSM state for initial LastSeenState
     current_state = case socket.assigns.fsm_ref do
       fsm_ref when is_pid(fsm_ref) ->
@@ -222,7 +216,7 @@ defmodule MermaidLiveSsrWeb.MainLive do
      socket
      |> assign(:visitors_active, active_count)
      |> assign(:visitors_cluster, active_count)
-     |> assign(:total_visitors, total_count)
+     |> assign(:total_visitors, active_count)  # Will be updated by presence messages
      |> assign(:last_event, last_seen_state)}
   end
 

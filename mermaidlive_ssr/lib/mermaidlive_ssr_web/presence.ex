@@ -18,7 +18,7 @@ defmodule MermaidLiveSsrWeb.Presence do
         :ets.insert(:visitor_counter, {:total, 0})
       _ -> :ok
     end
-    
+
     {:ok, %{total_count: :ets.lookup_element(:visitor_counter, :total, 2)}}
   end
 
@@ -26,7 +26,7 @@ defmodule MermaidLiveSsrWeb.Presence do
   def handle_metas(_topic, %{joins: joins, leaves: _leaves}, presences, state) do
     # Calculate and broadcast presence updates
     active_count = map_size(presences)
-    
+
     # Update total count for new joins
     new_total = if map_size(joins) > 0 do
       current_total = :ets.lookup_element(:visitor_counter, :total, 2)
@@ -36,7 +36,7 @@ defmodule MermaidLiveSsrWeb.Presence do
     else
       :ets.lookup_element(:visitor_counter, :total, 2)
     end
-    
+
     # Broadcast to presence channel for LiveView updates
     Phoenix.PubSub.broadcast(
       MermaidLiveSsr.PubSub,
