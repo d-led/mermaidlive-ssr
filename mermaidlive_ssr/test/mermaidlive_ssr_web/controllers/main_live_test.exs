@@ -1,4 +1,4 @@
-defmodule MermaidLiveSsrWeb.PageControllerTest do
+defmodule MermaidLiveSsrWeb.MainLiveControllerTest do
   use MermaidLiveSsrWeb.ConnCase
 
   test "GET /", %{conn: conn} do
