@@ -194,15 +194,30 @@ defmodule MermaidLiveSsrWeb.MainLive do
 
   @impl true
   def handle_info(:load_initial_values, socket) do
-    # Load initial visitor counts
-    active_count = MermaidLiveSsr.VisitorTracker.get_active_count()
-    total_count = MermaidLiveSsr.VisitorTracker.get_total_count()
+    # Get initial values from Presence
+    presences = MermaidLiveSsrWeb.Presence.list("visitors")
+    active_count = map_size(presences)
+
+    # Get current FSM state for initial LastSeenState
+    current_state = case socket.assigns.fsm_ref do
+      fsm_ref when is_pid(fsm_ref) ->
+        if Process.alive?(fsm_ref) do
+          MermaidLiveSsr.CountdownFSM.get_state(fsm_ref)
+        else
+          :waiting
+        end
+      _ ->
+        :waiting  # Default fallback
+    end
+    timestamp = DateTime.utc_now() |> DateTime.to_iso8601()
+    last_seen_state = "#{timestamp}: LastSeenState [param: #{current_state}]"
 
     {:noreply,
      socket
      |> assign(:visitors_active, active_count)
      |> assign(:visitors_cluster, active_count)
-     |> assign(:total_visitors, total_count)}
+     |> assign(:total_visitors, active_count)
+     |> assign(:last_event, last_seen_state)}
   end
 
   @impl true
@@ -210,7 +225,7 @@ defmodule MermaidLiveSsrWeb.MainLive do
     {:noreply,
      socket
      |> assign(:visitors_active, active)
-     |> assign(:visitors_cluster, cluster)
+     |> assign(:visitors_cluster, cluster)  # This should be different from active in a real cluster
      |> assign(:total_visitors, total)}
   end
 
@@ -277,6 +292,7 @@ defmodule MermaidLiveSsrWeb.MainLive do
       }
     )
   end
+
 
 
 

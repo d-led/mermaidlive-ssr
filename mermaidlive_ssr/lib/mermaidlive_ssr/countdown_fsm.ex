@@ -152,7 +152,7 @@ defmodule MermaidLiveSsr.CountdownFSM do
     # Also publish to global events channel for tracking
     {event_name, param} = case new_state do
       {:working, _count} -> {"WorkStarted", ""}
-      :waiting -> {"LastSeenState", "waiting"}
+      :waiting -> {"WorkDone", ""}  # Changed from LastSeenState to WorkDone
       :aborting -> {"WorkAbortRequested", ""}
       _ -> {"StateChange", ""}
     end

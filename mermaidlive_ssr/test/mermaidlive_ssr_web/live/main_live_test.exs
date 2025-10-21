@@ -14,21 +14,8 @@ defmodule MermaidLiveSsrWeb.MainLiveTest do
     end
 
     test "clicking start link actually starts the countdown", %{conn: conn} do
-      # Create a test FSM with a known channel and name
-      test_channel = "test_fsm_#{System.unique_integer([:positive])}"
-      test_name = :test_fsm_integration
-
-      {:ok, test_fsm} =
-        MermaidLiveSsr.CountdownFSM.start_link(
-          [tick_interval: 100, pubsub_channel: test_channel],
-          test_name
-        )
-
-      # Subscribe to the test FSM's channel (override the global subscription)
-      Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, test_channel)
-
-      # Mount the LiveView with the test FSM by name
-      {:ok, view, html} = live(conn, "/?fsm_ref=#{test_name}")
+      # Use the global FSM for simplicity
+      {:ok, view, html} = live(conn, "/")
 
       # Verify initial state shows waiting
       assert html =~ "waiting"
@@ -41,9 +28,6 @@ defmodule MermaidLiveSsrWeb.MainLiveTest do
 
       # Wait for countdown to progress
       assert_receive {:new_state, {:working, count}} when count < 10, 2000
-
-      # Clean up
-      Process.exit(test_fsm, :normal)
     end
 
     test "clicking abort link during countdown actually aborts", %{conn: conn} do

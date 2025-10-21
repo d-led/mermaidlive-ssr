@@ -6,6 +6,12 @@ defmodule MermaidLiveSsr.VisitorTrackerTest do
       # Start the application if not already started
       Application.ensure_all_started(:mermaidlive_ssr)
 
+      # Start VisitorTracker if not already started
+      case MermaidLiveSsr.VisitorTracker.start_link() do
+        {:ok, _pid} -> :ok
+        {:error, {:already_started, _pid}} -> :ok
+      end
+
       # Subscribe to events channel
       Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, "events")
 

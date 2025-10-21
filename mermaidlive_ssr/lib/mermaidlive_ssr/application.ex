@@ -17,7 +17,6 @@ defmodule MermaidLiveSsr.Application do
         [
           {Phoenix.PubSub, name: MermaidLiveSsr.PubSub},
           MermaidLiveSsrWeb.Presence,
-          MermaidLiveSsr.VisitorTracker,
           %{
             id: MermaidLiveSsr.CountdownFSM,
             start: {MermaidLiveSsr.CountdownFSM, :start_link, [[tick_interval: 1000]]},

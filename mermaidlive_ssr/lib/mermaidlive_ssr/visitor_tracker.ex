@@ -34,7 +34,7 @@ defmodule MermaidLiveSsr.VisitorTracker do
     # Initialize ETS table for total visitor counter
     :ets.new(:visitor_counter, [:named_table, :public, :set])
     :ets.insert(:visitor_counter, {:total, 0})
-    
+
     {:ok, %{active_count: 0, total_count: 0}}
   end
 
@@ -42,41 +42,41 @@ defmodule MermaidLiveSsr.VisitorTracker do
   def handle_call({:joined, visitor_id}, _from, state) do
     new_active = state.active_count + 1
     new_total = state.total_count + 1
-    
+
     # Update ETS table
     :ets.insert(:visitor_counter, {:total, new_total})
-    
+
     # Publish events
     Phoenix.PubSub.broadcast(
       MermaidLiveSsr.PubSub,
       "events",
       {:visitors_active, new_active}
     )
-    
+
     Phoenix.PubSub.broadcast(
       MermaidLiveSsr.PubSub,
       "events",
       {:total_visitors, new_total}
     )
-    
+
     Logger.info("Visitor joined: #{visitor_id}, active: #{new_active}, total: #{new_total}")
-    
+
     {:reply, :ok, %{state | active_count: new_active, total_count: new_total}}
   end
 
   @impl true
   def handle_call({:left, visitor_id}, _from, state) do
     new_active = max(0, state.active_count - 1)
-    
+
     # Publish events
     Phoenix.PubSub.broadcast(
       MermaidLiveSsr.PubSub,
       "events",
       {:visitors_active, new_active}
     )
-    
+
     Logger.info("Visitor left: #{visitor_id}, active: #{new_active}")
-    
+
     {:reply, :ok, %{state | active_count: new_active}}
   end
 
