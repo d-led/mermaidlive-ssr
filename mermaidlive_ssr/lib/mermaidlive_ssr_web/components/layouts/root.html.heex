@@ -2,20 +2,55 @@
 <html lang="en" class="[scrollbar-gutter:stable]">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <meta name="csrf-token" content={get_csrf_token()} />
     <meta
       name="context-path"
       content={Application.get_env(:main_app, MainAppWeb.Endpoint)[:context_path]}
     />
-    <.live_title default="MainApp" suffix=" · Phoenix Framework">
+    <.live_title default="Pre-rendered Mermaid.js Server-side Update Demo" suffix=" · Phoenix Framework">
       {assigns[:page_title]}
     </.live_title>
-    <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
+    
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" integrity="sha256-zRgmWB5PK4CvTx4FiXsxbHaYRBBjz/rvu97sOC7kzXI=" crossorigin="anonymous">
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fontawesome-free@1.0.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+    
+    <!-- Custom styles for table-fit and monospaced -->
+    <style>
+      .monospaced {
+        font-family: "Courier New", Courier, monospace;
+      }
+      
+      table.table-fit {
+        width: auto !important;
+        table-layout: auto !important;
+      }
+      table.table-fit thead th,
+      table.table-fit tbody td,
+      table.table-fit tfoot th,
+      table.table-fit tfoot td {
+        width: auto !important;
+      }
+    </style>
+    
+    <!-- Phoenix assets -->
     <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
     </script>
+    
+    <!-- jQuery -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha256-NfRUfZNkERrKSFA0c1a8VmCplPDYtpTYj5lQmKe1R/o=" crossorigin="anonymous"></script>
+    
   </head>
-  <body class="bg-white">
+  <body>
     {@inner_content}
+    <script type="module">
+      mermaid.initialize({ startOnLoad: false });
+    </script>
   </body>
 </html>

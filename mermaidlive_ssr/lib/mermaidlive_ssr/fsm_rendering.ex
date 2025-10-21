@@ -8,7 +8,6 @@ defmodule MermaidLiveSsr.FsmRendering do
 
   def start_link(_) do
     Logger.info("Starting FsmRendering")
-
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
   end
 
@@ -23,9 +22,17 @@ defmodule MermaidLiveSsr.FsmRendering do
     GenServer.call(__MODULE__, :get_last_rendered_diagram, 1_000)
   end
 
+  def send_command(command) do
+    MermaidLiveSsr.CountdownFSM.send_command(MermaidLiveSsr.CountdownFSM, command)
+  end
+
+  # Removed render_fsm_state - FSM rendering should be handled by the FSM itself
+
+
   @impl true
   def init(state) do
-    Process.send_after(self(), {:render_fsm, @waiting_state}, 10)
+    # Just render the initial waiting state, no automatic countdown
+    send(self(), {:render_fsm, @waiting_state})
     Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, @fsm_updates_channel)
 
     {:ok,
@@ -33,7 +40,8 @@ defmodule MermaidLiveSsr.FsmRendering do
        state,
        %{
          last_state_seen: @waiting_state,
-         last_rendered_diagram: @placeholder
+         last_rendered_diagram: @placeholder,
+         counter: 0
        }
      )}
   end
@@ -45,10 +53,11 @@ defmodule MermaidLiveSsr.FsmRendering do
 
   @impl true
   def handle_info({:render_fsm, fsm_state}, state) do
-    rendered_graph = MermaidliveSsr.PreRenderedSvg.render_state(fsm_state)
+    rendered_graph = MermaidliveSsr.PreRenderedSvg.render_state(fsm_state, state.counter)
 
     case rendered_graph do
       {:ok, svg} ->
+        # Use global channel for global FSM
         Phoenix.PubSub.broadcast(
           MermaidLiveSsr.PubSub,
           @rendered_graph_channel,
@@ -65,11 +74,43 @@ defmodule MermaidLiveSsr.FsmRendering do
 
   @impl true
   def handle_info({:new_state, fsm_state}, state) do
-    handle_info({:render_fsm, fsm_state}, state)
+    # Extract counter from FSM state if it's a working state with counter
+    counter = case fsm_state do
+      {:working, count} -> count
+      _ -> 0
+    end
+    handle_info({:render_fsm, fsm_state}, %{state | counter: counter})
   end
+
+  @impl true
+  def handle_info({:fsm_error, error}, state) do
+    # Log FSM errors but don't crash
+    Logger.warning("FSM Error: #{error}")
+    {:noreply, state}
+  end
+
+
+  @impl true
+  def handle_info(:reset_counter, state) do
+    # Reset counter and go back to waiting
+    new_state = %{state | counter: 0, last_state_seen: "waiting"}
+    handle_info({:render_fsm, "waiting"}, new_state)
+  end
+
+  # Removed timing-related handlers - FSM should handle all timing
 
   @impl true
   def handle_call(:get_last_rendered_diagram, _from, state) do
     {:reply, {:ok, state.last_rendered_diagram}, state}
   end
+
+  @impl true
+  def handle_cast({:command, command}, state) do
+    # Delegate to CountdownFSM
+    MermaidLiveSsr.CountdownFSM.send_command(MermaidLiveSsr.CountdownFSM, command)
+    {:noreply, state}
+  end
+
+  # Removed isolated command handling - this should be done by actual FSM instances
+
 end
