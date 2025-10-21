@@ -31,9 +31,21 @@ defmodule MermaidLiveSsrWeb.MainLive do
     fsm_channel = get_fsm_channel(fsm_ref)
     pubsub_channel = get_pubsub_channel(params, socket.assigns)
 
+    # Initialize ETS table for visitor counter if it doesn't exist
+    case :ets.whereis(:visitor_counter) do
+      :undefined ->
+        :ets.new(:visitor_counter, [:named_table, :public, :set])
+        :ets.insert(:visitor_counter, {:total, 0})
+      _ -> :ok
+    end
+
     if connected?(socket) do
       # Subscribe to the FSM-specific channel for state changes
       Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, fsm_channel)
+      # Subscribe to global events channel
+      Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, "events")
+      # Track this visitor
+      track_visitor(socket)
       send(self(), {:fetch_last_rendered_diagram, fsm_ref})
     end
 
@@ -44,7 +56,13 @@ defmodule MermaidLiveSsrWeb.MainLive do
      |> assign(:counter, 0)
      |> assign(:fsm_ref, fsm_ref)
      |> assign(:fsm_channel, fsm_channel)
-     |> assign(:pubsub_channel, pubsub_channel)}
+     |> assign(:pubsub_channel, pubsub_channel)
+     |> assign(:last_event, "")
+     |> assign(:last_error, "")
+     |> assign(:visitors_active, 0)
+     |> assign(:visitors_cluster, 0)
+     |> assign(:replicas, "1")
+     |> assign(:total_visitors, 0)}
   end
 
   defp get_fsm_ref(params, assigns) do
@@ -174,8 +192,50 @@ defmodule MermaidLiveSsrWeb.MainLive do
   end
 
   @impl true
-  def handle_info({:fsm_error, _error_message}, socket) do
-    {:noreply, socket}
+  def handle_info({:fsm_error, error_message}, socket) do
+    {:noreply, assign(socket, :last_error, error_message)}
+  end
+
+  @impl true
+  def handle_info({:presence_diff, _}, socket) do
+    # Update visitor counts when presence changes
+    update_visitor_counts(socket)
+  end
+
+  @impl true
+  def handle_info({:presence_state, _}, socket) do
+    # Update visitor counts when presence state is received
+    update_visitor_counts(socket)
+  end
+
+  @impl true
+  def handle_info({:last_event, event}, socket) do
+    {:noreply, assign(socket, :last_event, event)}
+  end
+
+  @impl true
+  def handle_info({:last_error, error}, socket) do
+    {:noreply, assign(socket, :last_error, error)}
+  end
+
+  @impl true
+  def handle_info({:visitors_active, count}, socket) do
+    {:noreply, assign(socket, :visitors_active, count)}
+  end
+
+  @impl true
+  def handle_info({:visitors_cluster, count}, socket) do
+    {:noreply, assign(socket, :visitors_cluster, count)}
+  end
+
+  @impl true
+  def handle_info({:replicas, replicas}, socket) do
+    {:noreply, assign(socket, :replicas, replicas)}
+  end
+
+  @impl true
+  def handle_info({:total_visitors, count}, socket) do
+    {:noreply, assign(socket, :total_visitors, count)}
   end
 
   # Extract state from SVG by looking for the inProgress class
@@ -194,6 +254,50 @@ defmodule MermaidLiveSsrWeb.MainLive do
       [_, counter_str] -> String.to_integer(counter_str)
       _ -> 0
     end
+  end
+
+  # Track visitor using Phoenix Presence
+  defp track_visitor(_socket) do
+    visitor_id = "visitor_#{System.unique_integer([:positive])}"
+    MermaidLiveSsrWeb.Presence.track(
+      self(),
+      "visitors",
+      visitor_id,
+      %{
+        online_at: System.system_time(:second),
+        pid: self()
+      }
+    )
+
+    # Increment total visitors counter
+    Phoenix.PubSub.broadcast(
+      MermaidLiveSsr.PubSub,
+      "events",
+      {:total_visitors, get_total_visitors() + 1}
+    )
+  end
+
+  # Simple in-memory counter for total visitors (in production, use persistent storage)
+  defp get_total_visitors do
+    case :ets.lookup(:visitor_counter, :total) do
+      [{:total, count}] -> count
+      [] -> 0
+    end
+  end
+
+
+  # Update visitor counts from presence
+  defp update_visitor_counts(socket) do
+    presences = MermaidLiveSsrWeb.Presence.list("visitors")
+    active_count = map_size(presences)
+
+    # For now, cluster count is same as active count (single replica)
+    cluster_count = active_count
+
+    {:noreply,
+     socket
+     |> assign(:visitors_active, active_count)
+     |> assign(:visitors_cluster, cluster_count)}
   end
 
   @impl true
@@ -262,23 +366,23 @@ defmodule MermaidLiveSsrWeb.MainLive do
             <tbody>
               <tr class="monospaced">
                 <td>Last event</td>
-                <td><span id="last-event"></span></td>
+                <td><span id="last-event"><%= @last_event %></span></td>
               </tr>
               <tr class="monospaced">
                 <td>Last error</td>
-                <td><span id="delayed-text"></span></td>
+                <td><span id="delayed-text"><%= @last_error %></span></td>
               </tr>
               <tr class="monospaced">
                 <td>Visitors active on this replica</td>
-                <td><span id="visitors-active"></span></td>
+                <td><span id="visitors-active"><%= @visitors_active %></span></td>
               </tr>
               <tr class="monospaced">
                 <td>Visitors active in the cluster</td>
-                <td><span id="visitors-active-cluster"></span></td>
+                <td><span id="visitors-active-cluster"><%= @visitors_cluster %></span></td>
               </tr>
               <tr class="monospaced">
                 <td>Server revision</td>
-                <td><span id="server-revision"></span></td>
+                <td><span id="server-revision">dev</span></td>
               </tr>
               <tr class="monospaced">
                 <td>Source</td>
@@ -290,11 +394,11 @@ defmodule MermaidLiveSsrWeb.MainLive do
               </tr>
               <tr class="monospaced">
                 <td>Replicas</td>
-                <td><span id="replicas"></span></td>
+                <td><span id="replicas"><%= @replicas %></span></td>
               </tr>
               <tr class="monospaced">
                 <td>Total started connections</td>
-                <td><span id="total-visitors"></span></td>
+                <td><span id="total-visitors"><%= @total_visitors %></span></td>
               </tr>
             </tbody>
           </table>

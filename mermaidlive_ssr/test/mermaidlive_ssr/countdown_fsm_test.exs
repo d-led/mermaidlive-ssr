@@ -10,10 +10,13 @@ defmodule MermaidLiveSsr.CountdownFSMTest do
       test_channel = "test_fsm_#{System.unique_integer([:positive])}"
 
       {:ok, fsm_pid} =
-        MermaidLiveSsr.CountdownFSM.start_link(
+        case MermaidLiveSsr.CountdownFSM.start_link(
           [tick_interval: 100, pubsub_channel: test_channel],
           :test_fsm
-        )
+        ) do
+          {:error, {:already_started, pid}} -> {:ok, pid}
+          result -> result
+        end
 
       # Subscribe to the FSM's specific channel
       Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, test_channel)

@@ -3,6 +3,6 @@ defmodule MermaidLiveSsrWeb.PageControllerTest do
 
   test "GET /", %{conn: conn} do
     conn = get(conn, ~p"/")
-    assert html_response(conn, 200) =~ "Mermaid.js Server-Side Rendered Live Demo"
+    assert html_response(conn, 200) =~ "Mermaid.js Server-Side Pre-rendered Live Demo"
   end
 end

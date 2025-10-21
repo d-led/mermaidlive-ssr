@@ -16,6 +16,7 @@ defmodule MermaidLiveSsr.Application do
         clustering() ++
         [
           {Phoenix.PubSub, name: MermaidLiveSsr.PubSub},
+          MermaidLiveSsrWeb.Presence,
           %{
             id: MermaidLiveSsr.CountdownFSM,
             start: {MermaidLiveSsr.CountdownFSM, :start_link, [[tick_interval: 1000]]},

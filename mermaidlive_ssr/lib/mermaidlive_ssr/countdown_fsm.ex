@@ -92,7 +92,8 @@ defmodule MermaidLiveSsr.CountdownFSM do
 
   # State: Working
   def working(:state_timeout, :tick, %{count: 1} = data) do
-    # when finished
+    # when finished - publish WorkDone event
+    publish_work_done_event(data)
     publish_state_change(:waiting, data)
     {:next_state, :waiting, Map.delete(data, :count)}
   end
@@ -100,7 +101,10 @@ defmodule MermaidLiveSsr.CountdownFSM do
   def working(:state_timeout, :tick, %{count: count, tick_interval: tick_interval} = data)
       when count > 1 do
     new_count = count - 1
+    # Publish state change first, then tick event
     publish_state_change({:working, new_count}, data)
+    # Publish tick event after state change to ensure it's the last event
+    publish_tick_event(count, data)
     {:keep_state, Map.put(data, :count, new_count), {:state_timeout, tick_interval, :tick}}
   end
 
@@ -122,6 +126,8 @@ defmodule MermaidLiveSsr.CountdownFSM do
 
   # State: Aborting
   def aborting(:state_timeout, :linger, data) do
+    # Publish WorkAborted event before transitioning to waiting
+    publish_work_aborted_event(data)
     publish_state_change(:waiting, data)
     {:next_state, :waiting, data}
   end
@@ -136,18 +142,87 @@ defmodule MermaidLiveSsr.CountdownFSM do
   end
 
   defp publish_state_change(new_state, %{pubsub_channel: channel}) do
+    # Publish to FSM channel
     Phoenix.PubSub.broadcast(
       MermaidLiveSsr.PubSub,
       channel,
       {:new_state, new_state}
     )
+
+    # Also publish to global events channel for tracking
+    {event_name, param} = case new_state do
+      {:working, _count} -> {"WorkStarted", ""}
+      :waiting -> {"LastSeenState", "waiting"}
+      :aborting -> {"WorkAbortRequested", ""}
+      _ -> {"StateChange", ""}
+    end
+
+    timestamp = DateTime.utc_now() |> DateTime.to_iso8601()
+    event_line = if param != "" do
+      "#{timestamp}: #{event_name} [param: #{param}]"
+    else
+      "#{timestamp}: #{event_name}"
+    end
+
+    Phoenix.PubSub.broadcast(
+      MermaidLiveSsr.PubSub,
+      "events",
+      {:last_event, event_line}
+    )
+  end
+
+  defp publish_tick_event(count, %{pubsub_channel: _channel}) do
+    # Publish tick event to global events channel
+    timestamp = DateTime.utc_now() |> DateTime.to_iso8601()
+    tick_line = "#{timestamp}: Tick [param: #{count}]"
+
+    Phoenix.PubSub.broadcast(
+      MermaidLiveSsr.PubSub,
+      "events",
+      {:last_event, tick_line}
+    )
+  end
+
+  defp publish_work_aborted_event(%{pubsub_channel: _channel}) do
+    # Publish WorkAborted event to global events channel
+    timestamp = DateTime.utc_now() |> DateTime.to_iso8601()
+    aborted_line = "#{timestamp}: WorkAborted"
+
+    Phoenix.PubSub.broadcast(
+      MermaidLiveSsr.PubSub,
+      "events",
+      {:last_event, aborted_line}
+    )
+  end
+
+  defp publish_work_done_event(%{pubsub_channel: _channel}) do
+    # Publish WorkDone event to global events channel
+    timestamp = DateTime.utc_now() |> DateTime.to_iso8601()
+    done_line = "#{timestamp}: WorkDone"
+
+    Phoenix.PubSub.broadcast(
+      MermaidLiveSsr.PubSub,
+      "events",
+      {:last_event, done_line}
+    )
   end
 
   defp publish_fsm_error(error, %{pubsub_channel: channel}) do
+    # Publish to FSM channel
     Phoenix.PubSub.broadcast(
       MermaidLiveSsr.PubSub,
       channel,
       {:fsm_error, error}
+    )
+
+    # Also publish to global events channel for tracking
+    timestamp = DateTime.utc_now() |> DateTime.to_iso8601()
+    error_line = "#{timestamp}: RequestIgnored [reason: #{error}]"
+
+    Phoenix.PubSub.broadcast(
+      MermaidLiveSsr.PubSub,
+      "events",
+      {:last_error, error_line}
     )
   end
 end
