@@ -7,11 +7,6 @@ defmodule MermaidLiveSsrWeb.MainLiveIntegrationTest do
       # Start the application if not already started
       Application.ensure_all_started(:mermaidlive_ssr)
 
-      # Subscribe to the default FSM channel
-      Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, "fsm_updates")
-      # Subscribe to events channel
-      Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, "events")
-
       %{}
     end
 

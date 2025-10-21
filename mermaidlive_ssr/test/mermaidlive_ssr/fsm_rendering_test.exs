@@ -283,7 +283,7 @@ defmodule MermaidLiveSsr.FsmRenderingTest do
 
       # Abort during countdown
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :abort)
-      assert_receive {:new_state, :aborting}
+      assert_receive {:new_state, :aborting}, 500
 
       # Should auto-transition back to waiting
       assert_receive {:new_state, :waiting}, 2000
