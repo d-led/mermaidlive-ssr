@@ -28,7 +28,6 @@ defmodule MermaidLiveSsr.FsmRendering do
 
   # Removed render_fsm_state - FSM rendering should be handled by the FSM itself
 
-
   @impl true
   def init(state) do
     # Just render the initial waiting state, no automatic countdown
@@ -75,10 +74,12 @@ defmodule MermaidLiveSsr.FsmRendering do
   @impl true
   def handle_info({:new_state, fsm_state}, state) do
     # Extract counter from FSM state if it's a working state with counter
-    counter = case fsm_state do
-      {:working, count} -> count
-      _ -> 0
-    end
+    counter =
+      case fsm_state do
+        {:working, count} -> count
+        _ -> 0
+      end
+
     handle_info({:render_fsm, fsm_state}, %{state | counter: counter})
   end
 
@@ -88,7 +89,6 @@ defmodule MermaidLiveSsr.FsmRendering do
     Logger.warning("FSM Error: #{error}")
     {:noreply, state}
   end
-
 
   @impl true
   def handle_info(:reset_counter, state) do
@@ -112,5 +112,4 @@ defmodule MermaidLiveSsr.FsmRendering do
   end
 
   # Removed isolated command handling - this should be done by actual FSM instances
-
 end

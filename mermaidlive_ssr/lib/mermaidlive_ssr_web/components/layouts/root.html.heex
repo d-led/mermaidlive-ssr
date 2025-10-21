@@ -8,22 +8,35 @@
       name="context-path"
       content={Application.get_env(:main_app, MainAppWeb.Endpoint)[:context_path]}
     />
-    <.live_title default="Pre-rendered Mermaid.js Server-side Update Demo" suffix=" · Phoenix Framework">
+    <.live_title
+      default="Pre-rendered Mermaid.js Server-side Update Demo"
+      suffix=" · Phoenix Framework"
+    >
       {assigns[:page_title]}
     </.live_title>
     
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" integrity="sha256-zRgmWB5PK4CvTx4FiXsxbHaYRBBjz/rvu97sOC7kzXI=" crossorigin="anonymous">
+<!-- Bootstrap CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css"
+      integrity="sha256-zRgmWB5PK4CvTx4FiXsxbHaYRBBjz/rvu97sOC7kzXI="
+      crossorigin="anonymous"
+    />
     
-    <!-- FontAwesome -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fontawesome-free@1.0.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+<!-- FontAwesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/fontawesome-free@1.0.4/css/all.min.css"
+      integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4="
+      crossorigin="anonymous"
+    />
     
-    <!-- Custom styles for table-fit and monospaced -->
+<!-- Custom styles for table-fit and monospaced -->
     <style>
       .monospaced {
         font-family: "Courier New", Courier, monospace;
       }
-      
+
       table.table-fit {
         width: auto !important;
         table-layout: auto !important;
@@ -36,16 +49,25 @@
       }
     </style>
     
-    <!-- Phoenix assets -->
+<!-- Phoenix assets -->
     <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
     </script>
     
-    <!-- jQuery -->
-    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+<!-- jQuery -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"
+      integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+      crossorigin="anonymous"
+    >
+    </script>
     
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha256-NfRUfZNkERrKSFA0c1a8VmCplPDYtpTYj5lQmKe1R/o=" crossorigin="anonymous"></script>
-    
+<!-- Bootstrap JS -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"
+      integrity="sha256-NfRUfZNkERrKSFA0c1a8VmCplPDYtpTYj5lQmKe1R/o="
+      crossorigin="anonymous"
+    >
+    </script>
   </head>
   <body>
     {@inner_content}

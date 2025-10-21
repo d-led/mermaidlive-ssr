@@ -38,18 +38,25 @@ defmodule MermaidLiveSsr.CountdownFSM do
 
     # If no custom channel is provided and this is not the global FSM,
     # use a PID-based channel to avoid interference
-    final_channel = if pubsub_channel == @fsm_updates_channel do
-      # Check if this is the global FSM by checking if it's registered with the module name
-      current_pid = self()
-      case Process.whereis(__MODULE__) do
-        ^current_pid ->
-          @fsm_updates_channel  # This is the global FSM (pinned match)
-        _ ->
-          get_channel_for_pid(current_pid)  # This is a test FSM, use PID-based channel
+    final_channel =
+      if pubsub_channel == @fsm_updates_channel do
+        # Check if this is the global FSM by checking if it's registered with the module name
+        current_pid = self()
+
+        case Process.whereis(__MODULE__) do
+          ^current_pid ->
+            # This is the global FSM (pinned match)
+            @fsm_updates_channel
+
+          _ ->
+            # This is a test FSM, use PID-based channel
+            get_channel_for_pid(current_pid)
+        end
+      else
+        # Use the explicitly provided channel
+        pubsub_channel
       end
-    else
-      pubsub_channel  # Use the explicitly provided channel
-    end
+
     {:ok, :waiting, %{tick_interval: tick_interval, pubsub_channel: final_channel}}
   end
 
@@ -90,7 +97,8 @@ defmodule MermaidLiveSsr.CountdownFSM do
     {:next_state, :waiting, Map.delete(data, :count)}
   end
 
-  def working(:state_timeout, :tick, %{count: count, tick_interval: tick_interval} = data) when count > 1 do
+  def working(:state_timeout, :tick, %{count: count, tick_interval: tick_interval} = data)
+      when count > 1 do
     new_count = count - 1
     publish_state_change({:working, new_count}, data)
     {:keep_state, Map.put(data, :count, new_count), {:state_timeout, tick_interval, :tick}}

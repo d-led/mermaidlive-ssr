@@ -11,8 +11,12 @@ defmodule MermaidLiveSsrWeb.MainLive do
 
   # Helper function for testing - create a test FSM with custom configuration
   def create_test_fsm(opts \\ []) do
-    tick_interval = Keyword.get(opts, :tick_interval, 100)  # Fast for testing
-    pubsub_channel = Keyword.get(opts, :pubsub_channel, "test_fsm_#{System.unique_integer([:positive])}")
+    # Fast for testing
+    tick_interval = Keyword.get(opts, :tick_interval, 100)
+
+    pubsub_channel =
+      Keyword.get(opts, :pubsub_channel, "test_fsm_#{System.unique_integer([:positive])}")
+
     name = Keyword.get(opts, :name, :"test_fsm_#{System.unique_integer([:positive])}")
 
     MermaidLiveSsr.CountdownFSM.start_link(
@@ -48,9 +52,11 @@ defmodule MermaidLiveSsrWeb.MainLive do
       # Check if FSM ref is already assigned (for testing)
       Map.has_key?(assigns, :fsm_ref) ->
         assigns.fsm_ref
+
       # Check URL params for FSM reference
       Map.has_key?(params, "fsm_ref") ->
         fsm_ref = params["fsm_ref"]
+
         if is_binary(fsm_ref) do
           # Try to parse as PID first, then as atom
           case fsm_ref do
@@ -58,6 +64,7 @@ defmodule MermaidLiveSsrWeb.MainLive do
               # This is a PID string, we can't easily parse it back to PID
               # For now, default to global FSM
               MermaidLiveSsr.CountdownFSM
+
             _ ->
               # Convert to atom (for test FSM names)
               String.to_atom(fsm_ref)
@@ -65,6 +72,7 @@ defmodule MermaidLiveSsrWeb.MainLive do
         else
           fsm_ref
         end
+
       # Default to global FSM
       true ->
         MermaidLiveSsr.CountdownFSM
@@ -76,9 +84,11 @@ defmodule MermaidLiveSsrWeb.MainLive do
       # Check if channel is already assigned (for testing)
       Map.has_key?(assigns, :pubsub_channel) ->
         assigns.pubsub_channel
+
       # Check URL params for custom channel
       Map.has_key?(params, "pubsub_channel") ->
         params["pubsub_channel"]
+
       # Default to rendered graph channel
       true ->
         @rendered_graph_channel
@@ -91,17 +101,22 @@ defmodule MermaidLiveSsrWeb.MainLive do
       # If it's the global FSM module, use the default channel
       fsm_ref == MermaidLiveSsr.CountdownFSM ->
         "fsm_updates"
+
       # If it's a PID, construct channel name based on PID
       is_pid(fsm_ref) ->
         MermaidLiveSsr.CountdownFSM.get_channel_for_pid(fsm_ref)
+
       # If it's an atom (named process), try to get its PID and then its channel
       is_atom(fsm_ref) ->
         case Process.whereis(fsm_ref) do
           nil ->
-            "fsm_updates"  # Fallback to default if process not found
+            # Fallback to default if process not found
+            "fsm_updates"
+
           pid ->
             MermaidLiveSsr.CountdownFSM.get_channel_for_pid(pid)
         end
+
       # For other cases, use default
       true ->
         "fsm_updates"
@@ -135,13 +150,14 @@ defmodule MermaidLiveSsrWeb.MainLive do
   @impl true
   def handle_info({:new_state, new_state}, socket) do
     # Handle direct FSM state changes (for isolated FSMs)
-    {state_name, counter} = case new_state do
-      {:working, count} -> {"working", count}
-      :working -> {"working", 0}
-      :waiting -> {"waiting", 0}
-      :aborting -> {"aborting", 0}
-      state when is_atom(state) -> {Atom.to_string(state), 0}
-    end
+    {state_name, counter} =
+      case new_state do
+        {:working, count} -> {"working", count}
+        :working -> {"working", 0}
+        :waiting -> {"waiting", 0}
+        :aborting -> {"aborting", 0}
+        state when is_atom(state) -> {Atom.to_string(state), 0}
+      end
 
     # Render the new state
     case MermaidliveSsr.PreRenderedSvg.render_state(state_name, counter) do
@@ -151,6 +167,7 @@ defmodule MermaidLiveSsrWeb.MainLive do
          |> assign(:diagram, svg)
          |> assign(:state, state_name)
          |> assign(:counter, counter)}
+
       {:error, _reason} ->
         {:noreply, socket}
     end
@@ -206,11 +223,11 @@ defmodule MermaidLiveSsrWeb.MainLive do
         <h4>Mermaid.js Server-Side Pre-rendered Live Demo</h4>
         <p>
           <small>Click on the edges (guards) to interact with the state machine.</small>
-          <br>
+          <br />
           <small>State machine is local to the server replica.</small>
-          <br>
+          <br />
           <small>Open the page in multiple browsers and observe interactive changes.</small>
-          <br>
+          <br />
           <small>Go offline and back online to experiment with re-connection.</small>
         </p>
         <div class="d-flex flex-row mt-2 mb-2" id="graph">
@@ -235,48 +252,52 @@ defmodule MermaidLiveSsrWeb.MainLive do
         </div>
 
         <div class="table-responsive-sm d-flex flex-row mt-2 mb-2">
-        <table class="table table-fit">
-          <thead class="thead-light">
-            <tr>
-              <th scope="col" style="display: none;">Info</th>
-              <th scope="col" style="display: none;">Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr class="monospaced">
-              <td>Last event</td>
-              <td><span id="last-event"></span></td>
-            </tr>
-            <tr class="monospaced">
-              <td>Last error</td>
-              <td><span id="delayed-text"></span></td>
-            </tr>
-            <tr class="monospaced">
-              <td>Visitors active on this replica</td>
-              <td><span id="visitors-active"></span></td>
-            </tr>
-            <tr class="monospaced">
-              <td>Visitors active in the cluster</td>
-              <td><span id="visitors-active-cluster"></span></td>
-            </tr>
-            <tr class="monospaced">
-              <td>Server revision</td>
-              <td><span id="server-revision"></span></td>
-            </tr>
-            <tr class="monospaced">
-              <td>Source</td>
-              <td><a href="https://github.com/d-led/mermaidlive-ssr">github.com/d-led/mermaidlive-ssr</a></td>
-            </tr>
-            <tr class="monospaced">
-              <td>Replicas</td>
-              <td><span id="replicas"></span></td>
-            </tr>
-            <tr class="monospaced">
-              <td>Total started connections</td>
-              <td><span id="total-visitors"></span></td>
-            </tr>
-          </tbody>
-        </table>
+          <table class="table table-fit">
+            <thead class="thead-light">
+              <tr>
+                <th scope="col" style="display: none;">Info</th>
+                <th scope="col" style="display: none;">Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="monospaced">
+                <td>Last event</td>
+                <td><span id="last-event"></span></td>
+              </tr>
+              <tr class="monospaced">
+                <td>Last error</td>
+                <td><span id="delayed-text"></span></td>
+              </tr>
+              <tr class="monospaced">
+                <td>Visitors active on this replica</td>
+                <td><span id="visitors-active"></span></td>
+              </tr>
+              <tr class="monospaced">
+                <td>Visitors active in the cluster</td>
+                <td><span id="visitors-active-cluster"></span></td>
+              </tr>
+              <tr class="monospaced">
+                <td>Server revision</td>
+                <td><span id="server-revision"></span></td>
+              </tr>
+              <tr class="monospaced">
+                <td>Source</td>
+                <td>
+                  <a href="https://github.com/d-led/mermaidlive-ssr">
+                    github.com/d-led/mermaidlive-ssr
+                  </a>
+                </td>
+              </tr>
+              <tr class="monospaced">
+                <td>Replicas</td>
+                <td><span id="replicas"></span></td>
+              </tr>
+              <tr class="monospaced">
+                <td>Total started connections</td>
+                <td><span id="total-visitors"></span></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </main>

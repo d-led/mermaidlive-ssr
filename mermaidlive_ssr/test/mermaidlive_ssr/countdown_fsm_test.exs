@@ -8,7 +8,12 @@ defmodule MermaidLiveSsr.CountdownFSMTest do
 
       # Create an isolated FSM for testing with a known channel
       test_channel = "test_fsm_#{System.unique_integer([:positive])}"
-      {:ok, fsm_pid} = MermaidLiveSsr.CountdownFSM.start_link([tick_interval: 100, pubsub_channel: test_channel], :test_fsm)
+
+      {:ok, fsm_pid} =
+        MermaidLiveSsr.CountdownFSM.start_link(
+          [tick_interval: 100, pubsub_channel: test_channel],
+          :test_fsm
+        )
 
       # Subscribe to the FSM's specific channel
       Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, test_channel)
@@ -148,7 +153,12 @@ defmodule MermaidLiveSsr.CountdownFSMTest do
     test "FSM uses custom tick interval" do
       # Create FSM with custom tick interval and known channel
       test_channel = "test_custom_fsm_#{System.unique_integer([:positive])}"
-      {:ok, fsm_pid} = MermaidLiveSsr.CountdownFSM.start_link([tick_interval: 50, pubsub_channel: test_channel], :test_custom_fsm)
+
+      {:ok, fsm_pid} =
+        MermaidLiveSsr.CountdownFSM.start_link(
+          [tick_interval: 50, pubsub_channel: test_channel],
+          :test_custom_fsm
+        )
 
       # Subscribe to the FSM's specific channel
       Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, test_channel)
@@ -166,7 +176,11 @@ defmodule MermaidLiveSsr.CountdownFSMTest do
 
     test "FSM uses custom pubsub channel" do
       # Create FSM with custom pubsub channel
-      {:ok, fsm_pid} = MermaidLiveSsr.CountdownFSM.start_link([pubsub_channel: "custom_channel"], :test_custom_channel_fsm)
+      {:ok, fsm_pid} =
+        MermaidLiveSsr.CountdownFSM.start_link(
+          [pubsub_channel: "custom_channel"],
+          :test_custom_channel_fsm
+        )
 
       # Subscribe to custom channel
       Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, "custom_channel")

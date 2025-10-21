@@ -3,8 +3,10 @@ defmodule MermaidliveSsr.PreRenderedSvg do
     case graph_state do
       "working" when counter > 0 ->
         fetch_pre_rendered({"working", counter})
+
       "working" ->
         fetch_pre_rendered("working-generic")
+
       _ ->
         fetch_pre_rendered(graph_state)
     end

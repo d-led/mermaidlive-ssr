@@ -17,7 +17,12 @@ defmodule MermaidLiveSsrWeb.MainLiveTest do
       # Create a test FSM with a known channel and name
       test_channel = "test_fsm_#{System.unique_integer([:positive])}"
       test_name = :test_fsm_integration
-      {:ok, test_fsm} = MermaidLiveSsr.CountdownFSM.start_link([tick_interval: 100, pubsub_channel: test_channel], test_name)
+
+      {:ok, test_fsm} =
+        MermaidLiveSsr.CountdownFSM.start_link(
+          [tick_interval: 100, pubsub_channel: test_channel],
+          test_name
+        )
 
       # Subscribe to the test FSM's channel (override the global subscription)
       Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, test_channel)
@@ -26,7 +31,7 @@ defmodule MermaidLiveSsrWeb.MainLiveTest do
       {:ok, view, html} = live(conn, "/?fsm_ref=#{test_name}")
 
       # Verify initial state shows waiting
-    assert html =~ "waiting"
+      assert html =~ "waiting"
 
       # Click the start link in the SVG
       view |> element("[phx-click=\"start\"]") |> render_click()
@@ -45,7 +50,12 @@ defmodule MermaidLiveSsrWeb.MainLiveTest do
       # Create a test FSM with a known channel and name
       test_channel = "test_fsm_#{System.unique_integer([:positive])}"
       test_name = :test_fsm_abort
-      {:ok, test_fsm} = MermaidLiveSsr.CountdownFSM.start_link([tick_interval: 100, pubsub_channel: test_channel], test_name)
+
+      {:ok, test_fsm} =
+        MermaidLiveSsr.CountdownFSM.start_link(
+          [tick_interval: 100, pubsub_channel: test_channel],
+          test_name
+        )
 
       # Subscribe to the test FSM's channel
       Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, test_channel)
@@ -70,6 +80,7 @@ defmodule MermaidLiveSsrWeb.MainLiveTest do
           500 -> flunk("Did not receive :aborting state")
         end
       end
+
       wait_for_aborting.(wait_for_aborting)
 
       # Should auto-transition back to waiting
@@ -83,7 +94,12 @@ defmodule MermaidLiveSsrWeb.MainLiveTest do
       # Create a test FSM with a known channel and name
       test_channel = "test_fsm_#{System.unique_integer([:positive])}"
       test_name = :test_fsm_multiple
-      {:ok, test_fsm} = MermaidLiveSsr.CountdownFSM.start_link([tick_interval: 100, pubsub_channel: test_channel], test_name)
+
+      {:ok, test_fsm} =
+        MermaidLiveSsr.CountdownFSM.start_link(
+          [tick_interval: 100, pubsub_channel: test_channel],
+          test_name
+        )
 
       # Subscribe to the test FSM's channel
       Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, test_channel)
@@ -109,7 +125,12 @@ defmodule MermaidLiveSsrWeb.MainLiveTest do
       # Create a test FSM with a known channel and name
       test_channel = "test_fsm_#{System.unique_integer([:positive])}"
       test_name = :test_fsm_abort_waiting
-      {:ok, test_fsm} = MermaidLiveSsr.CountdownFSM.start_link([tick_interval: 100, pubsub_channel: test_channel], test_name)
+
+      {:ok, test_fsm} =
+        MermaidLiveSsr.CountdownFSM.start_link(
+          [tick_interval: 100, pubsub_channel: test_channel],
+          test_name
+        )
 
       # Subscribe to the test FSM's channel
       Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, test_channel)
@@ -131,7 +152,12 @@ defmodule MermaidLiveSsrWeb.MainLiveTest do
       # Create a test FSM with a known channel and name
       test_channel = "test_fsm_#{System.unique_integer([:positive])}"
       test_name = :test_fsm_complete
-      {:ok, test_fsm} = MermaidLiveSsr.CountdownFSM.start_link([tick_interval: 100, pubsub_channel: test_channel], test_name)
+
+      {:ok, test_fsm} =
+        MermaidLiveSsr.CountdownFSM.start_link(
+          [tick_interval: 100, pubsub_channel: test_channel],
+          test_name
+        )
 
       # Subscribe to the test FSM's channel
       Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, test_channel)
@@ -158,7 +184,12 @@ defmodule MermaidLiveSsrWeb.MainLiveTest do
       # Create a test FSM with a known channel and name
       test_channel = "test_fsm_#{System.unique_integer([:positive])}"
       test_name = :test_fsm_abort_e2e
-      {:ok, test_fsm} = MermaidLiveSsr.CountdownFSM.start_link([tick_interval: 100, pubsub_channel: test_channel], test_name)
+
+      {:ok, test_fsm} =
+        MermaidLiveSsr.CountdownFSM.start_link(
+          [tick_interval: 100, pubsub_channel: test_channel],
+          test_name
+        )
 
       # Subscribe to the test FSM's channel
       Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, test_channel)
@@ -183,6 +214,7 @@ defmodule MermaidLiveSsrWeb.MainLiveTest do
           500 -> flunk("Did not receive :aborting state")
         end
       end
+
       wait_for_aborting.(wait_for_aborting)
 
       # Wait for auto-transition back to waiting
@@ -201,7 +233,12 @@ defmodule MermaidLiveSsrWeb.MainLiveTest do
     test "LiveView can use custom FSM instance", %{conn: conn} do
       # Create a custom FSM for testing with a known channel
       test_channel = "test_fsm_#{System.unique_integer([:positive])}"
-      {:ok, custom_fsm} = MermaidLiveSsr.CountdownFSM.start_link([tick_interval: 50, pubsub_channel: test_channel], :custom_test_fsm)
+
+      {:ok, custom_fsm} =
+        MermaidLiveSsr.CountdownFSM.start_link(
+          [tick_interval: 50, pubsub_channel: test_channel],
+          :custom_test_fsm
+        )
 
       # Subscribe to custom FSM messages
       Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, test_channel)

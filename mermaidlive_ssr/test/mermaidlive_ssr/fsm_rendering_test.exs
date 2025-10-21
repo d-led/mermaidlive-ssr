@@ -1,7 +1,6 @@
 defmodule MermaidLiveSsr.FsmRenderingTest do
   use ExUnit.Case, async: false
 
-
   describe "FSM Core States (based on Go version)" do
     setup do
       # Start the application if not already started
@@ -115,7 +114,9 @@ defmodule MermaidLiveSsr.FsmRenderingTest do
       Application.ensure_all_started(:mermaidlive_ssr)
 
       # Create an isolated FSM for testing countdown behavior
-      {:ok, fsm_pid} = MermaidLiveSsr.CountdownFSM.start_link([tick_interval: 100], :test_countdown_fsm)
+      {:ok, fsm_pid} =
+        MermaidLiveSsr.CountdownFSM.start_link([tick_interval: 100], :test_countdown_fsm)
+
       %{fsm_pid: fsm_pid}
     end
 
@@ -152,7 +153,8 @@ defmodule MermaidLiveSsr.FsmRenderingTest do
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
       Process.sleep(1500)
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :abort)
-      Process.sleep(1200)  # Wait for aborting state (1s) + transition to waiting
+      # Wait for aborting state (1s) + transition to waiting
+      Process.sleep(1200)
 
       # Should be back in waiting state (waiting state doesn't display counter)
       assert {:ok, diagram} = MermaidLiveSsr.FsmRendering.get_last_rendered_diagram()
@@ -193,7 +195,12 @@ defmodule MermaidLiveSsr.FsmRenderingTest do
 
       # Create a truly isolated FSM instance for testing with known channel
       test_channel = "test_isolated_fsm_#{System.unique_integer([:positive])}"
-      {:ok, fsm_pid} = MermaidLiveSsr.CountdownFSM.start_link([tick_interval: 100, pubsub_channel: test_channel], :test_isolated_fsm)
+
+      {:ok, fsm_pid} =
+        MermaidLiveSsr.CountdownFSM.start_link(
+          [tick_interval: 100, pubsub_channel: test_channel],
+          :test_isolated_fsm
+        )
 
       # Subscribe to the FSM's specific channel
       Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, test_channel)
@@ -306,5 +313,4 @@ defmodule MermaidLiveSsr.FsmRenderingTest do
       assert_receive {:new_state, :waiting}, 2000
     end
   end
-
 end
