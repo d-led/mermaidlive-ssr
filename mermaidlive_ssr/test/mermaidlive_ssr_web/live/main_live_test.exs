@@ -14,12 +14,14 @@ defmodule MermaidLiveSsrWeb.MainLiveTest do
       # Create a test FSM with a known channel
       test_channel = "test_fsm_#{System.unique_integer([:positive])}"
 
-      test_fsm = case MermaidLiveSsr.CountdownFSM.start_link(
-        [tick_interval: 100, pubsub_channel: test_channel]
-      ) do
-        {:ok, pid} -> pid
-        {:error, {:already_started, pid}} -> pid
-      end
+      test_fsm =
+        case MermaidLiveSsr.CountdownFSM.start_link(
+               tick_interval: 100,
+               pubsub_channel: test_channel
+             ) do
+          {:ok, pid} -> pid
+          {:error, {:already_started, pid}} -> pid
+        end
 
       # Subscribe to the test FSM's channel
       Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, test_channel)

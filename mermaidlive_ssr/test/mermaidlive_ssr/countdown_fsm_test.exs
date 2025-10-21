@@ -11,9 +11,9 @@ defmodule MermaidLiveSsr.CountdownFSMTest do
 
       {:ok, fsm_pid} =
         case MermaidLiveSsr.CountdownFSM.start_link(
-          [tick_interval: 100, pubsub_channel: test_channel],
-          :test_fsm
-        ) do
+               [tick_interval: 100, pubsub_channel: test_channel],
+               :test_fsm
+             ) do
           {:error, {:already_started, pid}} -> {:ok, pid}
           result -> result
         end

@@ -197,35 +197,44 @@ defmodule MermaidLiveSsrWeb.MainLive do
     # Get initial values from Presence
     presences = MermaidLiveSsrWeb.Presence.list("visitors")
     active_count = map_size(presences)
-    
+
     # Get current FSM state for initial LastSeenState
-    current_state = case socket.assigns.fsm_ref do
-      fsm_ref when is_pid(fsm_ref) ->
-        if Process.alive?(fsm_ref) do
-          MermaidLiveSsr.CountdownFSM.get_state(fsm_ref)
-        else
+    current_state =
+      case socket.assigns.fsm_ref do
+        fsm_ref when is_pid(fsm_ref) ->
+          if Process.alive?(fsm_ref) do
+            MermaidLiveSsr.CountdownFSM.get_state(fsm_ref)
+          else
+            :waiting
+          end
+
+        _ ->
+          # Default fallback
           :waiting
-        end
-      _ ->
-        :waiting  # Default fallback
-    end
+      end
+
     timestamp = DateTime.utc_now() |> DateTime.to_iso8601()
     last_seen_state = "#{timestamp}: LastSeenState [param: #{current_state}]"
-    
+
     {:noreply,
      socket
      |> assign(:visitors_active, active_count)
      |> assign(:visitors_cluster, active_count)
-     |> assign(:total_visitors, active_count)  # Will be updated by presence messages
+     # Will be updated by presence messages
+     |> assign(:total_visitors, active_count)
      |> assign(:last_event, last_seen_state)}
   end
 
   @impl true
-  def handle_info({:presence_update, %{active_count: active, total_count: total, cluster_count: cluster}}, socket) do
+  def handle_info(
+        {:presence_update, %{active_count: active, total_count: total, cluster_count: cluster}},
+        socket
+      ) do
     {:noreply,
      socket
      |> assign(:visitors_active, active)
-     |> assign(:visitors_cluster, cluster)  # This should be different from active in a real cluster
+     # This should be different from active in a real cluster
+     |> assign(:visitors_cluster, cluster)
      |> assign(:total_visitors, total)}
   end
 
@@ -293,9 +302,6 @@ defmodule MermaidLiveSsrWeb.MainLive do
     )
   end
 
-
-
-
   @impl true
   def handle_event("start", _params, socket) do
     # Only allow start if we're in waiting state
@@ -362,19 +368,19 @@ defmodule MermaidLiveSsrWeb.MainLive do
             <tbody>
               <tr class="monospaced">
                 <td>Last event</td>
-                <td><span id="last-event"><%= @last_event %></span></td>
+                <td><span id="last-event">{@last_event}</span></td>
               </tr>
               <tr class="monospaced">
                 <td>Last error</td>
-                <td><span id="delayed-text"><%= @last_error %></span></td>
+                <td><span id="delayed-text">{@last_error}</span></td>
               </tr>
               <tr class="monospaced">
                 <td>Visitors active on this replica</td>
-                <td><span id="visitors-active"><%= @visitors_active %></span></td>
+                <td><span id="visitors-active">{@visitors_active}</span></td>
               </tr>
               <tr class="monospaced">
                 <td>Visitors active in the cluster</td>
-                <td><span id="visitors-active-cluster"><%= @visitors_cluster %></span></td>
+                <td><span id="visitors-active-cluster">{@visitors_cluster}</span></td>
               </tr>
               <tr class="monospaced">
                 <td>Server revision</td>
@@ -390,11 +396,11 @@ defmodule MermaidLiveSsrWeb.MainLive do
               </tr>
               <tr class="monospaced">
                 <td>Replicas</td>
-                <td><span id="replicas"><%= @replicas %></span></td>
+                <td><span id="replicas">{@replicas}</span></td>
               </tr>
               <tr class="monospaced">
                 <td>Total started connections</td>
-                <td><span id="total-visitors"><%= @total_visitors %></span></td>
+                <td><span id="total-visitors">{@total_visitors}</span></td>
               </tr>
             </tbody>
           </table>

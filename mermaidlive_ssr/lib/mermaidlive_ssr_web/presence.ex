@@ -16,7 +16,9 @@ defmodule MermaidLiveSsrWeb.Presence do
       :undefined ->
         :ets.new(:visitor_counter, [:named_table, :public, :set])
         :ets.insert(:visitor_counter, {:total, 0})
-      _ -> :ok
+
+      _ ->
+        :ok
     end
 
     {:ok, %{total_count: :ets.lookup_element(:visitor_counter, :total, 2)}}
@@ -28,24 +30,27 @@ defmodule MermaidLiveSsrWeb.Presence do
     active_count = map_size(presences)
 
     # Update total count for new joins
-    new_total = if map_size(joins) > 0 do
-      current_total = :ets.lookup_element(:visitor_counter, :total, 2)
-      new_total = current_total + map_size(joins)
-      :ets.insert(:visitor_counter, {:total, new_total})
-      new_total
-    else
-      :ets.lookup_element(:visitor_counter, :total, 2)
-    end
+    new_total =
+      if map_size(joins) > 0 do
+        current_total = :ets.lookup_element(:visitor_counter, :total, 2)
+        new_total = current_total + map_size(joins)
+        :ets.insert(:visitor_counter, {:total, new_total})
+        new_total
+      else
+        :ets.lookup_element(:visitor_counter, :total, 2)
+      end
 
     # Broadcast to presence channel for LiveView updates
     Phoenix.PubSub.broadcast(
       MermaidLiveSsr.PubSub,
       "presence_updates",
-      {:presence_update, %{
-        active_count: active_count,
-        total_count: new_total,
-        cluster_count: active_count  # For now, same as active
-      }}
+      {:presence_update,
+       %{
+         active_count: active_count,
+         total_count: new_total,
+         # For now, same as active
+         cluster_count: active_count
+       }}
     )
 
     {:ok, state}

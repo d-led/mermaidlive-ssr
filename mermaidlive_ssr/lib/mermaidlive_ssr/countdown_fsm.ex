@@ -150,19 +150,23 @@ defmodule MermaidLiveSsr.CountdownFSM do
     )
 
     # Also publish to global events channel for tracking
-    {event_name, param} = case new_state do
-      {:working, _count} -> {"WorkStarted", ""}
-      :waiting -> {"WorkDone", ""}  # Changed from LastSeenState to WorkDone
-      :aborting -> {"WorkAbortRequested", ""}
-      _ -> {"StateChange", ""}
-    end
+    {event_name, param} =
+      case new_state do
+        {:working, _count} -> {"WorkStarted", ""}
+        # Changed from LastSeenState to WorkDone
+        :waiting -> {"WorkDone", ""}
+        :aborting -> {"WorkAbortRequested", ""}
+        _ -> {"StateChange", ""}
+      end
 
     timestamp = DateTime.utc_now() |> DateTime.to_iso8601()
-    event_line = if param != "" do
-      "#{timestamp}: #{event_name} [param: #{param}]"
-    else
-      "#{timestamp}: #{event_name}"
-    end
+
+    event_line =
+      if param != "" do
+        "#{timestamp}: #{event_name} [param: #{param}]"
+      else
+        "#{timestamp}: #{event_name}"
+      end
 
     Phoenix.PubSub.broadcast(
       MermaidLiveSsr.PubSub,
