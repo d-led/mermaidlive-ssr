@@ -1,6 +1,13 @@
 defmodule MermaidliveSsr.PreRenderedSvg do
-  def render_state(graph_state \\ "waiting") do
-    fetch_pre_rendered(graph_state)
+  def render_state(graph_state \\ "waiting", counter \\ 0) do
+    case graph_state do
+      "working" when counter > 0 ->
+        fetch_pre_rendered({"working", counter})
+      "working" ->
+        fetch_pre_rendered("working-generic")
+      _ ->
+        fetch_pre_rendered(graph_state)
+    end
   end
 
   defmodule Embed do
@@ -23,7 +30,13 @@ defmodule MermaidliveSsr.PreRenderedSvg do
   end
 
   defp fetch_pre_rendered({graph_state, extended_state}) do
-    get_static_svg("#{graph_state}-#{extended_state}")
+    {:ok, svg} = get_static_svg("#{graph_state}-#{extended_state}")
+
+    replaced_svg =
+      svg
+      |> String.replace(">XX<", ">#{extended_state}<")
+
+    {:ok, replaced_svg}
   end
 
   defp fetch_pre_rendered(graph_state) do
