@@ -1,7 +1,13 @@
 defmodule MermaidLiveSsrWeb.MainLive do
   use MermaidLiveSsrWeb, :live_view
 
-  alias MermaidLiveSsrWeb.Live.{FsmResolver, VisitorTracker, SvgParser, SubscriptionManager, Constants}
+  alias MermaidLiveSsrWeb.Live.{
+    FsmResolver,
+    VisitorTracker,
+    SvgParser,
+    SubscriptionManager,
+    Constants
+  }
 
   # Helper function for testing - create LiveView with custom FSM reference
   def start_link_with_fsm(fsm_ref, _opts \\ []) do
@@ -74,7 +80,6 @@ defmodule MermaidLiveSsrWeb.MainLive do
      |> assign(:replicas, Constants.default_replicas())
      |> assign(:total_visitors, total_visitors)}
   end
-
 
   @impl true
   def handle_info({:fetch_last_rendered_diagram, _fsm_ref}, socket) do
@@ -182,7 +187,6 @@ defmodule MermaidLiveSsrWeb.MainLive do
   def handle_info({:total_visitors, count}, socket) do
     {:noreply, assign(socket, :total_visitors, count)}
   end
-
 
   @impl true
   def handle_event("start", _params, socket) do
