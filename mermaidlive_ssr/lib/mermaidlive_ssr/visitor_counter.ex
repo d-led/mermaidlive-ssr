@@ -84,12 +84,18 @@ defmodule MermaidLiveSsr.VisitorCounter do
     # Load persisted state if available
     state = load_persisted_state(persistence_file)
 
-    # Start periodic persistence
-    schedule_persistence()
+    # No periodic persistence - we rely on debounced persistence only
 
     Logger.info("VisitorCounter started with initial state: #{inspect(state)}")
 
-    {:ok, %{state: state, table_name: table_name, persistence_file: persistence_file}}
+    {:ok,
+     %{
+       state: state,
+       table_name: table_name,
+       persistence_file: persistence_file,
+       debounce_timer: nil,
+       has_changes: false
+     }}
   end
 
   @impl true
@@ -120,7 +126,10 @@ defmodule MermaidLiveSsr.VisitorCounter do
       {:visitor_count_updated, total_count}
     )
 
-    {:reply, total_count, %{server_state | state: new_state}}
+    # Schedule debounced persistence - cancel any existing timer and start a new one
+    new_server_state = schedule_debounced_persistence(server_state)
+
+    {:reply, total_count, %{new_server_state | state: new_state, has_changes: true}}
   end
 
   @impl true
@@ -165,18 +174,26 @@ defmodule MermaidLiveSsr.VisitorCounter do
         _from,
         %{state: state, persistence_file: persistence_file} = server_state
       ) do
-    persist_state(state, persistence_file)
+    persist_state(state, persistence_file, :manual)
     {:reply, :ok, server_state}
   end
 
+
   @impl true
   def handle_info(
-        :persist_state,
-        %{state: state, persistence_file: persistence_file} = server_state
+        :debounced_persist_state,
+        %{state: state, persistence_file: persistence_file, has_changes: has_changes} =
+          server_state
       ) do
-    persist_state(state, persistence_file)
-    schedule_persistence()
-    {:noreply, server_state}
+    # Only persist if there are actual changes
+    if has_changes do
+      persist_state(state, persistence_file, :debounced)
+      Logger.debug("Debounced persistence: state saved")
+    else
+      Logger.debug("Debounced persistence: no changes, skipping save")
+    end
+
+    {:noreply, %{server_state | debounce_timer: nil, has_changes: false}}
   end
 
   # Private functions
@@ -243,20 +260,29 @@ defmodule MermaidLiveSsr.VisitorCounter do
     end
   end
 
-  defp persist_state(state, persistence_file) do
+  defp persist_state(state, persistence_file, reason) do
     try do
       data = :erlang.term_to_binary(state)
       File.write!(persistence_file, data)
-      Logger.debug("Persisted visitor counter state")
+      Logger.debug("Persisted visitor counter state (#{reason})")
     rescue
       error ->
         Logger.error("Failed to persist state: #{inspect(error)}")
     end
   end
 
-  defp schedule_persistence do
-    # Persist state every 30 seconds
-    Process.send_after(self(), :persist_state, 30_000)
+
+  defp schedule_debounced_persistence(%{debounce_timer: nil} = server_state) do
+    # No existing timer, schedule debounced persistence
+    timer = Process.send_after(self(), :debounced_persist_state, 1000)
+    %{server_state | debounce_timer: timer}
+  end
+
+  defp schedule_debounced_persistence(%{debounce_timer: timer} = server_state) do
+    # Cancel existing timer and schedule a new one
+    Process.cancel_timer(timer)
+    new_timer = Process.send_after(self(), :debounced_persist_state, 1000)
+    %{server_state | debounce_timer: new_timer}
   end
 
   # Child spec for supervision
