@@ -6,7 +6,7 @@ defmodule MermaidLiveSsrWeb.Live.FsmResolver do
   communicate with it, making the LiveView more focused on presentation.
   """
 
-  @rendered_graph_channel "rendered_graph"
+  alias MermaidLiveSsrWeb.Live.Constants
 
   @doc """
   Resolves the FSM reference from params and assigns.
@@ -80,7 +80,7 @@ defmodule MermaidLiveSsrWeb.Live.FsmResolver do
 
       # Default to rendered graph channel
       true ->
-        @rendered_graph_channel
+        Constants.rendered_graph_channel()
     end
   end
 
@@ -99,7 +99,7 @@ defmodule MermaidLiveSsrWeb.Live.FsmResolver do
     cond do
       # If it's the global FSM module, use the default channel
       fsm_ref == MermaidLiveSsr.CountdownFSM ->
-        "fsm_updates"
+        Constants.fsm_updates_channel()
 
       # If it's a PID, construct channel name based on PID
       is_pid(fsm_ref) ->
@@ -110,7 +110,7 @@ defmodule MermaidLiveSsrWeb.Live.FsmResolver do
         case Process.whereis(fsm_ref) do
           nil ->
             # Fallback to default if process not found
-            "fsm_updates"
+            Constants.fsm_updates_channel()
 
           pid ->
             MermaidLiveSsr.CountdownFSM.get_channel_for_pid(pid)
@@ -118,7 +118,7 @@ defmodule MermaidLiveSsrWeb.Live.FsmResolver do
 
       # For other cases, use default
       true ->
-        "fsm_updates"
+        Constants.fsm_updates_channel()
     end
   end
 end

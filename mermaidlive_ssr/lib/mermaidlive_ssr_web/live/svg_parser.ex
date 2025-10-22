@@ -6,6 +6,8 @@ defmodule MermaidLiveSsrWeb.Live.SvgParser do
   the current state and counter values.
   """
 
+  alias MermaidLiveSsrWeb.Live.Constants
+
   @doc """
   Extracts state from SVG by looking for the inProgress class.
 
@@ -22,10 +24,10 @@ defmodule MermaidLiveSsrWeb.Live.SvgParser do
   """
   def extract_state_from_svg(svg) do
     cond do
-      String.contains?(svg, "state-waiting-4\" class=\"node inProgress") -> "waiting"
-      String.contains?(svg, "state-working-5\" class=\"node inProgress") -> "working"
-      String.contains?(svg, "state-aborting-4\" class=\"node inProgress") -> "aborting"
-      true -> "waiting"
+      String.contains?(svg, Constants.waiting_state_class()) -> Constants.waiting_state()
+      String.contains?(svg, Constants.working_state_class()) -> Constants.working_state()
+      String.contains?(svg, Constants.aborting_state_class()) -> Constants.aborting_state()
+      true -> Constants.waiting_state()
     end
   end
 
@@ -41,7 +43,7 @@ defmodule MermaidLiveSsrWeb.Live.SvgParser do
       0
   """
   def extract_counter_from_svg(svg) do
-    case Regex.run(~r/<p>(\d+)<\/p>/, svg) do
+    case Regex.run(Constants.counter_regex(), svg) do
       [_, counter_str] -> String.to_integer(counter_str)
       _ -> 0
     end

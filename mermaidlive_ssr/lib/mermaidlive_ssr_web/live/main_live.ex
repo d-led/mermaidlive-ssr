@@ -1,7 +1,7 @@
 defmodule MermaidLiveSsrWeb.MainLive do
   use MermaidLiveSsrWeb, :live_view
 
-  alias MermaidLiveSsrWeb.Live.{FsmResolver, VisitorTracker, SvgParser, SubscriptionManager}
+  alias MermaidLiveSsrWeb.Live.{FsmResolver, VisitorTracker, SvgParser, SubscriptionManager, Constants}
 
   # Helper function for testing - create LiveView with custom FSM reference
   def start_link_with_fsm(fsm_ref, _opts \\ []) do
@@ -61,8 +61,8 @@ defmodule MermaidLiveSsrWeb.MainLive do
 
     {:ok,
      socket
-     |> assign(:diagram, "<strong>Nothing here yet...</strong>")
-     |> assign(:state, "waiting")
+     |> assign(:diagram, Constants.default_diagram_message())
+     |> assign(:state, Constants.waiting_state())
      |> assign(:counter, 0)
      |> assign(:fsm_ref, fsm_ref)
      |> assign(:fsm_channel, fsm_channel)
@@ -71,7 +71,7 @@ defmodule MermaidLiveSsrWeb.MainLive do
      |> assign(:last_error, "")
      |> assign(:visitors_active, active_count)
      |> assign(:visitors_cluster, active_count)
-     |> assign(:replicas, "1")
+     |> assign(:replicas, Constants.default_replicas())
      |> assign(:total_visitors, total_visitors)}
   end
 
@@ -81,7 +81,7 @@ defmodule MermaidLiveSsrWeb.MainLive do
     diagram =
       case MermaidLiveSsr.FsmRendering.get_last_rendered_diagram() do
         {:ok, diagram} -> diagram
-        _ -> "<strong>No diagram available</strong>"
+        _ -> Constants.no_diagram_message()
       end
 
     {:noreply, assign(socket, diagram: diagram)}
@@ -105,10 +105,10 @@ defmodule MermaidLiveSsrWeb.MainLive do
     # Handle direct FSM state changes (for isolated FSMs)
     {state_name, counter} =
       case new_state do
-        {:working, count} -> {"working", count}
-        :working -> {"working", 0}
-        :waiting -> {"waiting", 0}
-        :aborting -> {"aborting", 0}
+        {:working, count} -> {Constants.working_state(), count}
+        :working -> {Constants.working_state(), 0}
+        :waiting -> {Constants.waiting_state(), 0}
+        :aborting -> {Constants.aborting_state(), 0}
         state when is_atom(state) -> {Atom.to_string(state), 0}
       end
 
@@ -187,7 +187,7 @@ defmodule MermaidLiveSsrWeb.MainLive do
   @impl true
   def handle_event("start", _params, socket) do
     # Only allow start if we're in waiting state
-    if socket.assigns.state == "waiting" do
+    if socket.assigns.state == Constants.waiting_state() do
       # Send command to FSM
       MermaidLiveSsr.CountdownFSM.send_command(socket.assigns.fsm_ref, :start)
       {:noreply, socket}

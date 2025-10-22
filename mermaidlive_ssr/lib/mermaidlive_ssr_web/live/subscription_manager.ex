@@ -6,6 +6,8 @@ defmodule MermaidLiveSsrWeb.Live.SubscriptionManager do
   channels and topics that the LiveView needs to listen to.
   """
 
+  alias MermaidLiveSsrWeb.Live.Constants
+
   @doc """
   Subscribes to all necessary channels for the LiveView.
 
@@ -24,10 +26,10 @@ defmodule MermaidLiveSsrWeb.Live.SubscriptionManager do
     # Subscribe to the FSM-specific channel for state changes
     Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, fsm_channel)
     # Subscribe to global events channel
-    Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, "events")
+    Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, Constants.events_channel())
     # Subscribe to presence updates
-    Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, "presence_updates")
+    Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, Constants.presence_updates_channel())
     # Subscribe to visitor counter updates
-    Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, "visitor_counter_updates")
+    Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, Constants.visitor_counter_updates_channel())
   end
 end

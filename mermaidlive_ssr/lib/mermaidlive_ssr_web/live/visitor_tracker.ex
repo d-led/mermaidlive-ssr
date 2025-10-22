@@ -6,6 +6,8 @@ defmodule MermaidLiveSsrWeb.Live.VisitorTracker do
   and handling visitor counter updates.
   """
 
+  alias MermaidLiveSsrWeb.Live.Constants
+
   @doc """
   Tracks a visitor using the VisitorCounter CRDT and Phoenix Presence.
 
@@ -28,7 +30,7 @@ defmodule MermaidLiveSsrWeb.Live.VisitorTracker do
     # Track in Presence - this will trigger presence_diff events
     MermaidLiveSsrWeb.Presence.track(
       self(),
-      "visitors",
+      Constants.visitors_topic(),
       visitor_id,
       %{
         online_at: System.system_time(:second),
@@ -52,7 +54,7 @@ defmodule MermaidLiveSsrWeb.Live.VisitorTracker do
   def load_initial_counts(is_connected) do
     if is_connected do
       # Load initial values synchronously BEFORE tracking visitor
-      presences = MermaidLiveSsrWeb.Presence.list("visitors")
+      presences = MermaidLiveSsrWeb.Presence.list(Constants.visitors_topic())
       active_count = map_size(presences)
       total_visitors = MermaidLiveSsr.VisitorCounter.get_count()
 
