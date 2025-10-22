@@ -53,6 +53,7 @@ defmodule MermaidLiveSsr.MixProject do
       {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.5"},
       {:req, "~> 0.5.10"},
+      {:delta_crdt, "~> 0.6.5"},
       {:lazy_html, ">= 0.1.0", only: :test}
     ]
   end

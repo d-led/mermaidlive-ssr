@@ -31,19 +31,45 @@ defmodule MermaidLiveSsrWeb.MainLive do
     fsm_channel = get_fsm_channel(fsm_ref)
     pubsub_channel = get_pubsub_channel(params, socket.assigns)
 
-    if connected?(socket) do
-      # Subscribe to the FSM-specific channel for state changes
-      Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, fsm_channel)
-      # Subscribe to global events channel
-      Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, "events")
-      # Subscribe to presence updates
-      Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, "presence_updates")
-      # Track this visitor
-      track_visitor(socket)
-      # Load initial values
-      send(self(), :load_initial_values)
-      send(self(), {:fetch_last_rendered_diagram, fsm_ref})
-    end
+    # Load initial values
+    require Logger
+    Logger.info("LiveView mount: connected?=#{connected?(socket)}")
+
+    {active_count, total_visitors} =
+      if connected?(socket) do
+        # Subscribe to the FSM-specific channel for state changes
+        Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, fsm_channel)
+        # Subscribe to global events channel
+        Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, "events")
+        # Subscribe to presence updates
+        Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, "presence_updates")
+        # Subscribe to visitor counter updates
+        Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, "visitor_counter_updates")
+
+        # Load initial values synchronously BEFORE tracking visitor
+        presences = MermaidLiveSsrWeb.Presence.list("visitors")
+        active_count = map_size(presences)
+        total_visitors = MermaidLiveSsr.VisitorCounter.get_count()
+
+        # Debug logging
+        require Logger
+
+        Logger.info(
+          "LiveView loaded initial values: active_count=#{active_count}, total_visitors=#{total_visitors}"
+        )
+
+        # Track this visitor (this will trigger PubSub broadcast)
+        track_visitor(socket)
+
+        send(self(), {:fetch_last_rendered_diagram, fsm_ref})
+
+        # Show the persisted value initially, PubSub will update it
+        {active_count, total_visitors}
+      else
+        # For non-connected state (SSR), read the persisted total via GenServer call
+        total_visitors = MermaidLiveSsr.VisitorCounter.get_count()
+        {0, total_visitors}
+      end
 
     {:ok,
      socket
@@ -55,10 +81,10 @@ defmodule MermaidLiveSsrWeb.MainLive do
      |> assign(:pubsub_channel, pubsub_channel)
      |> assign(:last_event, "")
      |> assign(:last_error, "")
-     |> assign(:visitors_active, 0)
-     |> assign(:visitors_cluster, 0)
+     |> assign(:visitors_active, active_count)
+     |> assign(:visitors_cluster, active_count)
      |> assign(:replicas, "1")
-     |> assign(:total_visitors, 0)}
+     |> assign(:total_visitors, total_visitors)}
   end
 
   defp get_fsm_ref(params, assigns) do
@@ -193,49 +219,25 @@ defmodule MermaidLiveSsrWeb.MainLive do
   end
 
   @impl true
-  def handle_info(:load_initial_values, socket) do
-    # Get initial values from Presence
-    presences = MermaidLiveSsrWeb.Presence.list("visitors")
-    active_count = map_size(presences)
-
-    # Get current FSM state for initial LastSeenState
-    current_state =
-      case socket.assigns.fsm_ref do
-        fsm_ref when is_pid(fsm_ref) ->
-          if Process.alive?(fsm_ref) do
-            MermaidLiveSsr.CountdownFSM.get_state(fsm_ref)
-          else
-            :waiting
-          end
-
-        _ ->
-          # Default fallback
-          :waiting
-      end
-
-    timestamp = DateTime.utc_now() |> DateTime.to_iso8601()
-    last_seen_state = "#{timestamp}: LastSeenState [param: #{current_state}]"
-
-    {:noreply,
-     socket
-     |> assign(:visitors_active, active_count)
-     |> assign(:visitors_cluster, active_count)
-     # Will be updated by presence messages
-     |> assign(:total_visitors, active_count)
-     |> assign(:last_event, last_seen_state)}
+  def handle_info(
+        {:presence_update, %{active_count: active, total_count: _total, cluster_count: cluster}},
+        socket
+      ) do
+    {
+      :noreply,
+      socket
+      |> assign(:visitors_active, active)
+      # This should be different from active in a real cluster
+      |> assign(:visitors_cluster, cluster)
+      # Don't override total_visitors from Presence - only use CRDT counter
+    }
   end
 
   @impl true
-  def handle_info(
-        {:presence_update, %{active_count: active, total_count: total, cluster_count: cluster}},
-        socket
-      ) do
-    {:noreply,
-     socket
-     |> assign(:visitors_active, active)
-     # This should be different from active in a real cluster
-     |> assign(:visitors_cluster, cluster)
-     |> assign(:total_visitors, total)}
+  def handle_info({:visitor_count_updated, total_count}, socket) do
+    require Logger
+    Logger.info("LiveView received visitor_count_updated: #{total_count}")
+    {:noreply, assign(socket, :total_visitors, total_count)}
   end
 
   @impl true
@@ -286,8 +288,11 @@ defmodule MermaidLiveSsrWeb.MainLive do
     end
   end
 
-  # Track visitor using Phoenix Presence
+  # Track visitor using the VisitorCounter CRDT and Phoenix Presence
   defp track_visitor(_socket) do
+    # Increment the visitor counter
+    MermaidLiveSsr.VisitorCounter.increment()
+
     visitor_id = "visitor_#{System.unique_integer([:positive])}"
 
     # Track in Presence - this will trigger presence_diff events

@@ -26,6 +26,7 @@ defmodule MermaidLiveSsr.Application do
             name: MermaidLiveSsr.CountdownFSM
           },
           MermaidLiveSsr.FsmRendering,
+          MermaidLiveSsr.VisitorCounter,
           MermaidLiveSsrWeb.Endpoint
         ]
 

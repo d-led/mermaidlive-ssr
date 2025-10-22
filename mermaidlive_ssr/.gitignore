@@ -42,3 +42,4 @@ npm-debug.log
 /priv/static/*-*.ico
 
 .elixir_ls/
+*.dat
