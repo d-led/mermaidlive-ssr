@@ -1,4 +1,11 @@
 defmodule MermaidLiveSsr.CountdownFSM do
+  @moduledoc """
+  A finite state machine for countdown operations.
+
+  This module implements a countdown state machine that can transition between
+  waiting, working, and aborting states. It's used to manage countdown timers
+  for visitor interactions.
+  """
   @behaviour :gen_statem
 
   @fsm_updates_channel "fsm_updates"

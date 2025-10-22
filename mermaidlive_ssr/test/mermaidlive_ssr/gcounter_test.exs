@@ -17,6 +17,15 @@ defmodule MermaidLiveSsr.GcounterTest do
           persistence_file: persistence_file
         )
 
+      on_exit(fn ->
+        # Clean up the test file and stop the process
+        File.rm(persistence_file)
+
+        if Process.alive?(pid) do
+          GenServer.stop(pid)
+        end
+      end)
+
       %{counter: test_name, pid: pid, persistence_file: persistence_file}
     end
 

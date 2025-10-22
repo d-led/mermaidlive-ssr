@@ -9,7 +9,8 @@ defmodule MermaidLiveSsr.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      test_coverage: [tool: ExCoveralls]
     ]
   end
 
@@ -54,7 +55,12 @@ defmodule MermaidLiveSsr.MixProject do
       {:bandit, "~> 1.5"},
       {:req, "~> 0.5.10"},
       {:delta_crdt, "~> 0.6.5"},
-      {:lazy_html, ">= 0.1.0", only: :test}
+      {:lazy_html, ">= 0.1.0", only: :test},
+      # Quality assurance dependencies
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:excoveralls, "~> 0.18", only: :test},
+      {:junit_formatter, "~> 3.3", only: :test}
     ]
   end
 
@@ -73,7 +79,12 @@ defmodule MermaidLiveSsr.MixProject do
         "tailwind mermaidlive_ssr --minify",
         "esbuild mermaidlive_ssr --minify",
         "phx.digest"
-      ]
+      ],
+      # Quality assurance aliases
+      quality: ["format --check-formatted", "credo --strict", "dialyzer"],
+      "quality.fix": ["format", "credo --strict"],
+      test: ["test --formatter JUnitFormatter --formatter ExUnit.CLIFormatter"],
+      "test.coverage": ["coveralls", "coveralls.html"]
     ]
   end
 end

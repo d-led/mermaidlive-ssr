@@ -44,7 +44,7 @@ defmodule MermaidLiveSsr.Application do
     :ok
   end
 
-  defp clustering() do
+  defp clustering do
     dns_query = Application.get_env(:mermaidlive_ssr, :dns_cluster_query)
     Logger.info("DNS Cluster Query: #{inspect(dns_query)}")
 

@@ -150,7 +150,10 @@ defmodule MermaidLiveSsr.VisitorCounterDebouncedPersistenceTest do
       assert Map.get(state, node_name) == 10
     end
 
-    test "process remains alive and responsive after persistence", %{counter_pid: pid, test_name: test_name} do
+    test "process remains alive and responsive after persistence", %{
+      counter_pid: pid,
+      test_name: test_name
+    } do
       # Increment the counter
       GenServer.call(test_name, :increment)
 

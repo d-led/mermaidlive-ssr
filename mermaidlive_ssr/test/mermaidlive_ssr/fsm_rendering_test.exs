@@ -298,8 +298,9 @@ defmodule MermaidLiveSsr.FsmRenderingTest do
       # Try to start again while already working (should be ignored)
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
 
-      # Should not receive any new state change message
-      refute_receive {:new_state, _}, 100
+      # FSM should continue its normal countdown (not restart)
+      # We should receive the next countdown state, not a restart to 10
+      assert_receive {:new_state, {:working, 9}}, 200
 
       # FSM should still be alive and continue countdown
       assert Process.alive?(fsm_pid)

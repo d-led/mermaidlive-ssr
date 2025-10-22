@@ -1,12 +1,13 @@
 defmodule MermaidLiveSsrWeb.MainLive do
   use MermaidLiveSsrWeb, :live_view
 
+  # credo:disable-for-next-line Credo.Check.Readability.AliasOrder
   alias MermaidLiveSsrWeb.Live.{
+    Constants,
     FsmResolver,
-    VisitorTracker,
     SvgParser,
     SubscriptionManager,
-    Constants
+    VisitorTracker
   }
 
   # Helper function for testing - create LiveView with custom FSM reference

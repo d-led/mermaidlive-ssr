@@ -1,4 +1,10 @@
 defmodule MermaidliveSsr.PreRenderedSvg do
+  @moduledoc """
+  Provides pre-rendered SVG templates for FSM states.
+
+  This module contains pre-rendered SVG templates for different FSM states
+  and provides functionality to customize them with specific values.
+  """
   def render_state(graph_state \\ "waiting", counter \\ 0) do
     case graph_state do
       "working" when counter > 0 ->
@@ -13,6 +19,9 @@ defmodule MermaidliveSsr.PreRenderedSvg do
   end
 
   defmodule Embed do
+    @moduledoc """
+    Helper module for embedding SVG content into HTML.
+    """
     def embed do
       Path.wildcard("priv/pre-rendering/output/*.svg")
       |> Enum.map(fn path ->

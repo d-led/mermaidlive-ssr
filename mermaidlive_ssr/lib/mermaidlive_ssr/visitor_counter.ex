@@ -178,7 +178,6 @@ defmodule MermaidLiveSsr.VisitorCounter do
     {:reply, :ok, server_state}
   end
 
-
   @impl true
   def handle_info(
         :debounced_persist_state,
@@ -261,16 +260,13 @@ defmodule MermaidLiveSsr.VisitorCounter do
   end
 
   defp persist_state(state, persistence_file, reason) do
-    try do
-      data = :erlang.term_to_binary(state)
-      File.write!(persistence_file, data)
-      Logger.debug("Persisted visitor counter state (#{reason})")
-    rescue
-      error ->
-        Logger.error("Failed to persist state: #{inspect(error)}")
-    end
+    data = :erlang.term_to_binary(state)
+    File.write!(persistence_file, data)
+    Logger.debug("Persisted visitor counter state (#{reason})")
+  rescue
+    error ->
+      Logger.error("Failed to persist state: #{inspect(error)}")
   end
-
 
   defp schedule_debounced_persistence(%{debounce_timer: nil} = server_state) do
     # No existing timer, schedule debounced persistence

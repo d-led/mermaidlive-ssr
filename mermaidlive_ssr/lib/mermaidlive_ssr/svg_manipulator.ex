@@ -1,11 +1,17 @@
 defmodule MermaidLiveSsr.SvgManipulator do
+  @moduledoc """
+  Utilities for manipulating SVG content.
+
+  This module provides functions for parsing and modifying SVG content,
+  including extracting state information and adjusting label dimensions.
+  """
   # not needed for now as a newer version of mermaid-cli is used
   def fix_node_text_dimensions(svg) do
     svg
     |> Floki.parse_document!()
     |> Floki.traverse_and_update(fn
       {"g", g_attrs, children} = g_element ->
-        with true <- is_state(g_attrs),
+        with true <- state?(g_attrs),
              {width, height} <- find_rect_dimensions(children) do
           {{_old_width, _old_height}, corrected_foreign_object} =
             g_element |> adjust_label_dimensions(width, height)
@@ -33,7 +39,7 @@ defmodule MermaidLiveSsr.SvgManipulator do
     |> Floki.raw_html()
   end
 
-  defp is_state(g_attrs) do
+  defp state?(g_attrs) do
     Enum.find(g_attrs, nil, fn el -> el == {"class", "node statediagram-state"} end) != nil
   end
 
@@ -56,25 +62,22 @@ defmodule MermaidLiveSsr.SvgManipulator do
   end
 
   defp find_number(el, key) do
-    with [string_value] <- Floki.attribute(el, key) do
-      {:ok, string_value |> to_int()}
-    else
+    case Floki.attribute(el, key) do
+      [string_value] -> {:ok, string_value |> to_int()}
       _ -> :not_found
     end
   end
 
   defp adjust_label_dimensions(el, width, height) do
     old_width =
-      with [ow] <- Floki.attribute(el, "foreignobject", "width") do
-        ow |> to_int()
-      else
+      case Floki.attribute(el, "foreignobject", "width") do
+        [ow] -> ow |> to_int()
         _ -> width
       end
 
     old_height =
-      with [oh] <- Floki.attribute(el, "foreignobject", "height") do
-        oh |> to_int()
-      else
+      case Floki.attribute(el, "foreignobject", "height") do
+        [oh] -> oh |> to_int()
         _ -> height
       end
 

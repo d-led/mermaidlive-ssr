@@ -1,4 +1,10 @@
 defmodule MermaidLiveSsr.FsmRendering do
+  @moduledoc """
+  Handles FSM state rendering and SVG generation.
+
+  This module manages the rendering of finite state machine states into SVG
+  diagrams and coordinates with the countdown FSM for real-time updates.
+  """
   use GenServer
 
   require Logger
