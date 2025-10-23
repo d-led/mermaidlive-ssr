@@ -43,3 +43,8 @@ npm-debug.log
 
 .elixir_ls/
 *.dat
+
+# Dialyzer PLT files
+/priv/plts/
+*.plt
+*.plt.hash
