@@ -32,7 +32,7 @@ jobs:
 
     strategy:
       matrix:
-        elixir: ['1.14', '1.19']
+        elixir: ['1.19']
         otp: ['26', '27']
         exclude:
           - elixir: '1.14'
