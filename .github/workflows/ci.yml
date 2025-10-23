@@ -116,21 +116,30 @@ jobs:
             mermaidlive_ssr/_build
           key: ${{ runner.os }}-mix-coverage-${{ hashFiles('**/mix.lock') }}
 
+      - name: Debug directory structure
+        run: |
+          pwd
+          ls -la
+          ls -la mermaidlive_ssr || echo "mermaidlive_ssr directory not found"
+
       - name: Install dependencies
-        run: cd mermaidlive_ssr && mix deps.get
+        working-directory: mermaidlive_ssr
+        run: mix deps.get
 
       - name: Run tests with coverage
         env:
           MIX_ENV: test
-        run: cd mermaidlive_ssr && mix coveralls --export-coverage all
+        working-directory: mermaidlive_ssr
+        run: mix coveralls --export-coverage all
 
       - name: Run coverage report
         env:
           MIX_ENV: test
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        working-directory: mermaidlive_ssr
         run: |
-          cd mermaidlive_ssr && mix test.coverage
-          cd mermaidlive_ssr && mix coveralls.github --import-cover cover
+          mix test.coverage
+          mix coveralls.github --import-cover cover
 
   quality:
     name: Code Quality
