@@ -10,7 +10,15 @@ defmodule MermaidLiveSsr.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
-      test_coverage: [tool: ExCoveralls]
+      test_coverage: [tool: ExCoveralls],
+      dialyzer: [
+        plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
+        flags: [:error_handling, :underspecs],
+        # Only check project modules, not dependencies
+        plt_add_apps: [:mix],
+        # Ignore specific warnings
+        ignore_warnings: ".dialyzer_ignore.exs"
+      ]
     ]
   end
 

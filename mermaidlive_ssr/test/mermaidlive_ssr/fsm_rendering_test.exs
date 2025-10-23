@@ -115,7 +115,7 @@ defmodule MermaidLiveSsr.FsmRenderingTest do
 
       # Create an isolated FSM for testing countdown behavior
       {:ok, fsm_pid} =
-        MermaidLiveSsr.CountdownFSM.start_link([tick_interval: 100], :test_countdown_fsm)
+        MermaidLiveSsr.CountdownFSM.start_link([tick_interval: 10], :test_countdown_fsm)
 
       %{fsm_pid: fsm_pid}
     end
@@ -199,7 +199,7 @@ defmodule MermaidLiveSsr.FsmRenderingTest do
 
       {:ok, fsm_pid} =
         case MermaidLiveSsr.CountdownFSM.start_link(
-               [tick_interval: 100, pubsub_channel: test_channel],
+               [tick_interval: 10, pubsub_channel: test_channel],
                :test_isolated_fsm
              ) do
           {:error, {:already_started, pid}} -> {:ok, pid}

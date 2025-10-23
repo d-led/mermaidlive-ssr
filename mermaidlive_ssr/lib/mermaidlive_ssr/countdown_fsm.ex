@@ -10,6 +10,8 @@ defmodule MermaidLiveSsr.CountdownFSM do
 
   @fsm_updates_channel "fsm_updates"
   @default_tick_interval 100
+  # Much faster for testing
+  @test_tick_interval 10
 
   # Public API
   def start_link(opts \\ []) do
@@ -35,10 +37,26 @@ defmodule MermaidLiveSsr.CountdownFSM do
     "fsm_#{:erlang.pid_to_list(pid) |> List.to_string() |> String.replace(["[", "]", " "], "")}"
   end
 
+  # Helper function to get appropriate tick interval based on environment
+  defp get_tick_interval(opts) do
+    case Keyword.get(opts, :tick_interval) do
+      nil ->
+        # Use test interval in test environment, default in others
+        if Mix.env() == :test do
+          @test_tick_interval
+        else
+          @default_tick_interval
+        end
+
+      interval ->
+        interval
+    end
+  end
+
   # Callbacks
   @impl true
   def init(opts) do
-    tick_interval = Keyword.get(opts, :tick_interval, @default_tick_interval)
+    tick_interval = get_tick_interval(opts)
     pubsub_channel = Keyword.get(opts, :pubsub_channel, @fsm_updates_channel)
 
     # IO.puts("FSM init: opts=#{inspect(opts)}, pubsub_channel=#{pubsub_channel}")
@@ -127,6 +145,11 @@ defmodule MermaidLiveSsr.CountdownFSM do
     {:next_state, :aborting, Map.delete(data, :count), {:state_timeout, tick_interval, :linger}}
   end
 
+  def working(:cast, :start, data) do
+    publish_fsm_error("Cannot start while in :working state", data)
+    :keep_state_and_data
+  end
+
   def working(_event, _content, _data) do
     :keep_state_and_data
   end
@@ -137,6 +160,16 @@ defmodule MermaidLiveSsr.CountdownFSM do
     publish_work_aborted_event(data)
     publish_state_change(:waiting, data)
     {:next_state, :waiting, data}
+  end
+
+  def aborting(:cast, :start, data) do
+    publish_fsm_error("Cannot start while in :aborting state", data)
+    :keep_state_and_data
+  end
+
+  def aborting(:cast, :abort, data) do
+    publish_fsm_error("Cannot abort while in :aborting state", data)
+    :keep_state_and_data
   end
 
   def aborting(_event, _content, _data) do
@@ -163,7 +196,6 @@ defmodule MermaidLiveSsr.CountdownFSM do
         # Changed from LastSeenState to WorkDone
         :waiting -> {"WorkDone", ""}
         :aborting -> {"WorkAbortRequested", ""}
-        _ -> {"StateChange", ""}
       end
 
     timestamp = DateTime.utc_now() |> DateTime.to_iso8601()

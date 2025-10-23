@@ -8,6 +8,7 @@ defmodule MermaidLiveSsr.Application do
   require Logger
 
   @impl true
+  @dialyzer {:nowarn_function, start: 2}
   def start(_type, _args) do
     children =
       [

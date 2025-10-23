@@ -49,6 +49,7 @@ defmodule Mix.Tasks.Quality do
     h: :help
   ]
 
+  @dialyzer {:nowarn_function, run: 1}
   def run(args) do
     {opts, _args, _} = OptionParser.parse(args, switches: @switches, aliases: @aliases)
 

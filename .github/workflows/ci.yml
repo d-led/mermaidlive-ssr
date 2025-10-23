@@ -32,8 +32,8 @@ jobs:
 
     strategy:
       matrix:
-        elixir: ['1.14', '1.15', '1.16']
-        otp: ['25', '26']
+        elixir: ['1.14', '1.19']
+        otp: ['26', '27']
         exclude:
           - elixir: '1.14'
             otp: '26'
@@ -56,21 +56,21 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            deps
-            _build
+            mermaidlive_ssr/deps
+            mermaidlive_ssr/_build
           key: ${{ runner.os }}-mix-${{ matrix.elixir }}-${{ matrix.otp }}-${{ hashFiles('**/mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-mix-${{ matrix.elixir }}-${{ matrix.otp }}-
 
       - name: Install dependencies
-        run: mix deps.get
+        run: cd mermaidlive_ssr && mix deps.get
 
       - name: Compile
-        run: mix compile --warnings-as-errors
+        run: cd mermaidlive_ssr && mix compile --warnings-as-errors
 
       - name: Run tests
         run: |
-          mix test \
+          cd mermaidlive_ssr && mix test \
             --formatter JUnitFormatter \
             --formatter ExUnit.CLIFormatter \
             --slowest 10
@@ -80,13 +80,13 @@ jobs:
         if: always()
         with:
           name: test-results-${{ matrix.elixir }}-${{ matrix.otp }}
-          path: _build/test/lib/mermaidlive_ssr/test-junit-report.xml
+          path: mermaidlive_ssr/_build/test/lib/mermaidlive_ssr/test-junit-report.xml
 
       - name: Publish test report
         uses: mikepenz/action-junit-report@v4
         if: always()
         with:
-          report_paths: '_build/test/lib/mermaidlive_ssr/test-junit-report.xml'
+          report_paths: 'mermaidlive_ssr/_build/test/lib/mermaidlive_ssr/test-junit-report.xml'
           check_name: 'Test Report (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})'
           detailed_summary: true
           include_passed: true
@@ -112,25 +112,25 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            deps
-            _build
+            mermaidlive_ssr/deps
+            mermaidlive_ssr/_build
           key: ${{ runner.os }}-mix-coverage-${{ hashFiles('**/mix.lock') }}
 
       - name: Install dependencies
-        run: mix deps.get
+        run: cd mermaidlive_ssr && mix deps.get
 
       - name: Run tests with coverage
         env:
           MIX_ENV: test
-        run: mix coveralls --export-coverage all
+        run: cd mermaidlive_ssr && mix coveralls --export-coverage all
 
       - name: Run coverage report
         env:
           MIX_ENV: test
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mix test.coverage
-          mix coveralls.github --import-cover cover
+          cd mermaidlive_ssr && mix test.coverage
+          cd mermaidlive_ssr && mix coveralls.github --import-cover cover
 
   quality:
     name: Code Quality
@@ -150,27 +150,27 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            deps
-            _build
+            mermaidlive_ssr/deps
+            mermaidlive_ssr/_build
           key: ${{ runner.os }}-mix-quality-${{ hashFiles('**/mix.lock') }}
 
       - name: Cache Dialyzer PLTs
         uses: actions/cache@v4
         with:
-          path: priv/plts
+          path: mermaidlive_ssr/priv/plts
           key: ${{ runner.os }}-dialyzer-1.18-27-${{ hashFiles('**/mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-dialyzer-1.18-27-
 
       - name: Install dependencies
-        run: mix deps.get
+        run: cd mermaidlive_ssr && mix deps.get
 
       - name: Check formatting
-        run: mix format --check-formatted
+        run: cd mermaidlive_ssr && mix format --check-formatted
 
       - name: Run Credo
-        run: mix credo --strict
+        run: cd mermaidlive_ssr && mix credo --strict
         continue-on-error: true
 
       - name: Run Dialyzer
-        run: mix dialyzer --format github
+        run: cd mermaidlive_ssr && mix dialyzer --format github
