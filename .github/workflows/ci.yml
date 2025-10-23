@@ -31,11 +31,12 @@ jobs:
       pull-requests: write
 
     strategy:
+      # Test matrix: newest Elixir/OTP + one older Elixir for compatibility
       matrix:
-        elixir: ['1.19']
+        elixir: ['1.18', '1.19']
         otp: ['26', '27']
         exclude:
-          - elixir: '1.14'
+          - elixir: '1.18'
             otp: '26'
 
     env:
@@ -97,6 +98,8 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+    # Only run coverage on newest versions to avoid redundancy
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
 
     steps:
       - name: Checkout code
@@ -105,8 +108,8 @@ jobs:
       - name: Setup Elixir
         uses: erlef/setup-beam@v1
         with:
-          elixir-version: '1.18'
-          otp-version: '27'
+          elixir-version: '1.19'  # Use newest Elixir for coverage
+          otp-version: '27'        # Use newest OTP for coverage
 
       - name: Cache dependencies
         uses: actions/cache@v4
