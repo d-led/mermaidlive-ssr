@@ -1,6 +1,22 @@
 defmodule MermaidLiveSsr.FsmRenderingTest do
   use ExUnit.Case, async: true
 
+  # Helper function to properly reset FSM to waiting state
+  defp reset_fsm_to_waiting(fsm_pid) do
+    case MermaidLiveSsr.CountdownFSM.get_state(fsm_pid) do
+      :aborting ->
+        # Wait for auto-transition from aborting to waiting (up to 2 seconds)
+        receive do
+          {:new_state, :waiting} -> :ok
+        after
+          2000 -> :ok  # Timeout after 2 seconds
+        end
+      _ ->
+        # FSM is not in aborting state, we can proceed
+        :ok
+    end
+  end
+
   describe "FSM Core States (based on Go version)" do
     setup do
       # Start the application if not already started
@@ -8,9 +24,8 @@ defmodule MermaidLiveSsr.FsmRenderingTest do
 
       # Use global FSM for testing and reset it to waiting state
       fsm_pid = MermaidLiveSsr.CountdownFSM
-      # Send abort to ensure we're in waiting state
-      MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :abort)
-      Process.sleep(100)
+      reset_fsm_to_waiting(fsm_pid)
+
       %{fsm_pid: fsm_pid}
     end
 
