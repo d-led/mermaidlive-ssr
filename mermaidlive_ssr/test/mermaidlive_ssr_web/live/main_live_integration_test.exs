@@ -39,7 +39,7 @@ defmodule MermaidLiveSsrWeb.MainLiveIntegrationTest do
       assert html =~ "Total started connections"
     end
 
-    test "tracks events when FSM state changes", %{conn: conn, clock: clock, fsm_pid: fsm_pid} do
+    test "tracks events when FSM state changes", %{conn: conn, clock: clock, fsm_pid: _fsm_pid} do
       {:ok, view, _html} = live(conn, "/")
 
       # Test that the FSM actually responds to commands

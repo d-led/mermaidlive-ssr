@@ -1,33 +1,26 @@
 defmodule MermaidLiveSsr.GlobalFsmIntegrationTest do
-  use ExUnit.Case, async: false  # Not async to avoid conflicts with global FSM
+  use ExUnit.Case, async: true
 
-  describe "Global FSM Integration Tests" do
+  describe "FSM Integration Tests with Virtual Time" do
     setup do
-      # Start the application if not already started
-      Application.ensure_all_started(:mermaidlive_ssr)
+      # Create a test FSM with virtual time (isolated from global FSM)
+      {:ok, clock} = VirtualClock.start_link()
+      test_name = :"test_fsm_#{System.unique_integer([:positive])}"
+      test_channel = "test_fsm_#{System.unique_integer([:positive])}"
+      
+      {:ok, fsm_pid} = VirtualTimeGenStateMachine.start_link(
+        MermaidLiveSsr.CountdownFSM,
+        [tick_interval: 100, pubsub_channel: test_channel],
+        [name: test_name, virtual_clock: clock]
+      )
 
-      # Get the global FSM PID
-      fsm_pid = Process.whereis(MermaidLiveSsr.CountdownFSM)
+      # Subscribe to FSM updates
+      Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, test_channel)
 
-      if fsm_pid do
-        # Reset FSM to waiting state if it's in a different state
-        case MermaidLiveSsr.CountdownFSM.get_state(fsm_pid) do
-          {:aborting, _} ->
-            # Wait for auto-transition from aborting to waiting
-            receive do
-              {:new_state, :waiting} -> :ok
-            after
-              2000 -> :ok  # Timeout after 2 seconds
-            end
-          _ ->
-            :ok
-        end
-      end
-
-      %{fsm_pid: fsm_pid}
+      %{fsm_pid: fsm_pid, clock: clock}
     end
 
-    test "global FSM is alive and responsive", %{fsm_pid: fsm_pid} do
+    test "FSM is alive and responsive", %{fsm_pid: fsm_pid} do
       # FSM should be alive
       assert Process.alive?(fsm_pid)
 
@@ -36,23 +29,19 @@ defmodule MermaidLiveSsr.GlobalFsmIntegrationTest do
       assert state == :waiting
     end
 
-    test "global FSM responds to start command", %{fsm_pid: fsm_pid} do
+    test "FSM responds to start command", %{fsm_pid: fsm_pid, clock: clock} do
       # Send start command
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
 
-      # Wait a bit for state transition
-      Process.sleep(100)
-
-      # FSM should be in working state
+      # FSM should be in working state immediately
       {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
       assert state == :working
       assert Map.get(data, :count) == 10
     end
 
-    test "global FSM responds to abort command", %{fsm_pid: fsm_pid} do
+    test "FSM responds to abort command", %{fsm_pid: fsm_pid, clock: clock} do
       # First start the FSM
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
-      Process.sleep(100)
 
       # Verify it's working
       {state, _data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
@@ -60,7 +49,6 @@ defmodule MermaidLiveSsr.GlobalFsmIntegrationTest do
 
       # Send abort command
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :abort)
-      Process.sleep(100)
 
       # FSM should be in aborting state
       {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
@@ -68,33 +56,34 @@ defmodule MermaidLiveSsr.GlobalFsmIntegrationTest do
       refute Map.has_key?(data, :count)
     end
 
-    test "global FSM auto-transitions from aborting to waiting", %{fsm_pid: fsm_pid} do
+    test "FSM auto-transitions from aborting to waiting with virtual time", %{fsm_pid: fsm_pid, clock: clock} do
       # Start and abort the FSM
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
-      Process.sleep(100)
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :abort)
-      Process.sleep(100)
 
-      # Wait for auto-transition back to waiting (1 second delay)
-      Process.sleep(1200)
+      # Verify it's aborting
+      {state, _data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :aborting
+
+      # Advance virtual time to trigger auto-transition back to waiting (100ms delay)
+      VirtualClock.advance(clock, 100)
 
       # FSM should be back in waiting state
       {state, _data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
       assert state == :waiting
     end
 
-    test "global FSM countdown works correctly", %{fsm_pid: fsm_pid} do
+    test "FSM countdown works correctly with virtual time", %{fsm_pid: fsm_pid, clock: clock} do
       # Start countdown
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
-      Process.sleep(100)
 
       # Check initial count
       {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
       assert state == :working
       assert Map.get(data, :count) == 10
 
-      # Wait for countdown to progress
-      Process.sleep(200)
+      # Advance virtual time to trigger countdown (tick interval is 100ms)
+      VirtualClock.advance(clock, 100)
 
       # Check that countdown progressed
       {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)

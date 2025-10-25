@@ -1,14 +1,21 @@
 defmodule MermaidLiveSsr.VisitorCounterDebouncedPersistenceTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   alias MermaidLiveSsr.VisitorCounter
 
   @test_file "test_debounced_persistence_#{System.unique_integer([:positive])}.dat"
 
   setup do
-    # Start a test instance of VisitorCounter with a unique name and persistence file
+    # Create virtual clock for testing
+    {:ok, clock} = VirtualClock.start_link()
+    VirtualTimeGenServer.set_virtual_clock(clock)
+
+    # Start a test instance of VisitorCounter with global virtual time
     test_name = :"test_visitor_counter_#{System.unique_integer([:positive])}"
-    {:ok, pid} = VisitorCounter.start_link(name: test_name, persistence_file: @test_file)
+    {:ok, pid} = VisitorCounter.start_link(
+      name: test_name,
+      persistence_file: @test_file
+    )
 
     # Ensure we start with a clean state
     File.rm(@test_file)
@@ -20,15 +27,23 @@ defmodule MermaidLiveSsr.VisitorCounterDebouncedPersistenceTest do
       if Process.alive?(pid) do
         GenServer.stop(pid)
       end
+
+      if Process.alive?(clock) do
+        GenServer.stop(clock)
+      end
+
+      # Reset virtual time
+      VirtualTimeGenServer.use_real_time()
     end)
 
-    %{counter_pid: pid, test_name: test_name}
+    %{counter_pid: pid, test_name: test_name, clock: clock}
   end
 
   describe "debounced persistence behavior" do
     test "persists state after 1 second of inactivity following increment", %{
       counter_pid: _pid,
-      test_name: test_name
+      test_name: test_name,
+      clock: clock
     } do
       # Initial state - no file should exist
       refute File.exists?(@test_file)
@@ -41,7 +56,7 @@ defmodule MermaidLiveSsr.VisitorCounterDebouncedPersistenceTest do
       refute File.exists?(@test_file)
 
       # Wait for debounced persistence (1 second + small buffer)
-      Process.sleep(1100)
+      VirtualClock.advance(clock, 1100)
 
       # File should now exist
       assert File.exists?(@test_file)
@@ -57,22 +72,23 @@ defmodule MermaidLiveSsr.VisitorCounterDebouncedPersistenceTest do
 
     test "cancels previous timer when incrementing multiple times rapidly", %{
       counter_pid: _pid,
-      test_name: test_name
+      test_name: test_name,
+      clock: clock
     } do
       # Increment multiple times rapidly
       GenServer.call(test_name, :increment)
-      Process.sleep(100)
+      VirtualClock.advance(clock, 100)
       GenServer.call(test_name, :increment)
-      Process.sleep(100)
+      VirtualClock.advance(clock, 100)
       GenServer.call(test_name, :increment)
-      Process.sleep(100)
+      VirtualClock.advance(clock, 100)
       GenServer.call(test_name, :increment)
 
       # File should not exist yet
       refute File.exists?(@test_file)
 
       # Wait for debounced persistence
-      Process.sleep(1100)
+      VirtualClock.advance(clock, 1100)
 
       # File should now exist with the final state (4 increments)
       assert File.exists?(@test_file)
@@ -86,24 +102,25 @@ defmodule MermaidLiveSsr.VisitorCounterDebouncedPersistenceTest do
 
     test "does not persist when no changes have occurred", %{
       counter_pid: _pid,
-      test_name: test_name
+      test_name: test_name,
+      clock: clock
     } do
       # Get initial count (this should not trigger persistence)
       _initial_count = GenServer.call(test_name, :get_count)
 
       # Wait longer than debounce period
-      Process.sleep(1100)
+      VirtualClock.advance(clock, 1100)
 
       # File should not exist because no changes occurred
       refute File.exists?(@test_file)
     end
 
-    test "resets has_changes flag after persistence", %{counter_pid: _pid, test_name: test_name} do
+    test "resets has_changes flag after persistence", %{counter_pid: _pid, test_name: test_name, clock: clock} do
       # Increment once
       GenServer.call(test_name, :increment)
 
       # Wait for persistence
-      Process.sleep(1100)
+      VirtualClock.advance(clock, 1100)
 
       # File should exist
       assert File.exists?(@test_file)
@@ -113,11 +130,11 @@ defmodule MermaidLiveSsr.VisitorCounterDebouncedPersistenceTest do
       first_mtime = stat.mtime
 
       # Wait a bit more and call get_count (should not trigger persistence)
-      Process.sleep(100)
+      VirtualClock.advance(clock, 100)
       GenServer.call(test_name, :get_count)
 
       # Wait for potential persistence
-      Process.sleep(1100)
+      VirtualClock.advance(clock, 1100)
 
       # File modification time should be the same
       {:ok, stat} = File.stat(@test_file)
@@ -128,17 +145,18 @@ defmodule MermaidLiveSsr.VisitorCounterDebouncedPersistenceTest do
 
     test "handles rapid increments and verifies only final state is persisted", %{
       counter_pid: _pid,
-      test_name: test_name
+      test_name: test_name,
+      clock: clock
     } do
       # Perform many rapid increments
       for _i <- 1..10 do
         GenServer.call(test_name, :increment)
         # Very short delay
-        Process.sleep(50)
+        VirtualClock.advance(clock, 50)
       end
 
       # Wait for debounced persistence
-      Process.sleep(1100)
+      VirtualClock.advance(clock, 1100)
 
       # Verify only one persistence operation occurred with final state
       assert File.exists?(@test_file)
@@ -152,13 +170,14 @@ defmodule MermaidLiveSsr.VisitorCounterDebouncedPersistenceTest do
 
     test "process remains alive and responsive after persistence", %{
       counter_pid: pid,
-      test_name: test_name
+      test_name: test_name,
+      clock: clock
     } do
       # Increment the counter
       GenServer.call(test_name, :increment)
 
       # Wait for debounced persistence
-      Process.sleep(1100)
+      VirtualClock.advance(clock, 1100)
 
       assert File.exists?(@test_file)
 
@@ -172,7 +191,8 @@ defmodule MermaidLiveSsr.VisitorCounterDebouncedPersistenceTest do
   describe "debounced persistence with multiple operations" do
     test "increment followed by get_count does not trigger persistence", %{
       counter_pid: _pid,
-      test_name: test_name
+      test_name: test_name,
+      clock: clock
     } do
       # Increment once
       GenServer.call(test_name, :increment)
@@ -183,7 +203,7 @@ defmodule MermaidLiveSsr.VisitorCounterDebouncedPersistenceTest do
       GenServer.call(test_name, :get_count)
 
       # Wait for debounced persistence
-      Process.sleep(1100)
+      VirtualClock.advance(clock, 1100)
 
       # File should exist (because of the increment)
       assert File.exists?(@test_file)

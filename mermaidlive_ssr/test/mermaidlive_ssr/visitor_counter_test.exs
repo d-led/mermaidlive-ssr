@@ -1,5 +1,5 @@
 defmodule MermaidLiveSsr.VisitorCounterTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias MermaidLiveSsr.VisitorCounter
 

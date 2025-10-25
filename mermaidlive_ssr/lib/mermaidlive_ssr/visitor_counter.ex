@@ -8,7 +8,7 @@ defmodule MermaidLiveSsr.VisitorCounter do
   using :ets tables.
   """
 
-  use GenServer
+  use VirtualTimeGenServer
   require Logger
 
   @table_name :visitor_counter_state
@@ -18,7 +18,7 @@ defmodule MermaidLiveSsr.VisitorCounter do
 
   def start_link(opts \\ []) do
     name = Keyword.get(opts, :name, __MODULE__)
-    GenServer.start_link(__MODULE__, opts, name: name)
+    VirtualTimeGenServer.start_link(__MODULE__, opts, [name: name])
   end
 
   @doc """
@@ -270,14 +270,14 @@ defmodule MermaidLiveSsr.VisitorCounter do
 
   defp schedule_debounced_persistence(%{debounce_timer: nil} = server_state) do
     # No existing timer, schedule debounced persistence
-    timer = Process.send_after(self(), :debounced_persist_state, 1000)
+    timer = VirtualTimeGenServer.send_after(self(), :debounced_persist_state, 1000)
     %{server_state | debounce_timer: timer}
   end
 
   defp schedule_debounced_persistence(%{debounce_timer: timer} = server_state) do
     # Cancel existing timer and schedule a new one
     Process.cancel_timer(timer)
-    new_timer = Process.send_after(self(), :debounced_persist_state, 1000)
+    new_timer = VirtualTimeGenServer.send_after(self(), :debounced_persist_state, 1000)
     %{server_state | debounce_timer: new_timer}
   end
 

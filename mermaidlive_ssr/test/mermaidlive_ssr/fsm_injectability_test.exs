@@ -1,5 +1,5 @@
 defmodule MermaidLiveSsr.FsmInjectabilityTest do
-  use ExUnit.Case, async: false  # Not async to avoid conflicts with global FSM
+  use ExUnit.Case, async: true
 
   describe "FSM Injectability for Testing" do
     test "FSM can be injected with virtual time for testing" do
@@ -19,7 +19,7 @@ defmodule MermaidLiveSsr.FsmInjectabilityTest do
       )
 
       # Test that the FSM works with virtual time
-      {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      {state, _data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
       assert state == :waiting
 
       # Start the FSM
@@ -66,7 +66,7 @@ defmodule MermaidLiveSsr.FsmInjectabilityTest do
       )
 
       # Test that the FSM works with real time
-      {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      {state, _data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
       assert state == :waiting
 
       # Start the FSM
