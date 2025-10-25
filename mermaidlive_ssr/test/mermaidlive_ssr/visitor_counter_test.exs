@@ -7,23 +7,55 @@ defmodule MermaidLiveSsr.VisitorCounterTest do
     setup do
       # Create a unique test counter instance
       test_name = :"test_counter_#{System.unique_integer([:positive])}"
+      table_name = :"test_table_#{System.unique_integer([:positive])}"
       persistence_file = "test_visitor_counter_#{System.unique_integer([:positive])}.dat"
 
       # Start a fresh counter instance
       {:ok, pid} =
         VisitorCounter.start_link(
           name: test_name,
-          table_name: :"test_table_#{System.unique_integer([:positive])}",
+          table_name: table_name,
           persistence_file: persistence_file
         )
+
+      # Set up cleanup
+      on_exit(fn ->
+        cleanup_counter(%{pid: pid, table_name: table_name, persistence_file: persistence_file})
+      end)
 
       # Return the test counter module and cleanup info
       %{
         counter: test_name,
         pid: pid,
+        table_name: table_name,
         persistence_file: persistence_file
       }
     end
+
+    # Cleanup function to stop the counter and clean up ETS tables
+    defp cleanup_counter(%{pid: pid, table_name: table_name, persistence_file: persistence_file}) do
+      if Process.alive?(pid) do
+        GenServer.stop(pid)
+      end
+
+      # Clean up ETS table
+      try do
+        :ets.delete(table_name)
+      rescue
+        _ -> :ok
+      end
+
+      # Clean up persistence file
+      try do
+        File.rm(persistence_file)
+      rescue
+        _ -> :ok
+      end
+
+      # Note: We don't clean up the global :visitor_counter table as it's used by Presence
+      # and other parts of the application. The test-specific table is cleaned up above.
+    end
+
 
     test "counter starts with zero count", %{counter: counter} do
       count = GenServer.call(counter, :get_count)
@@ -136,7 +168,7 @@ defmodule MermaidLiveSsr.VisitorCounterTest do
         VisitorCounter.start_link(name: counter, persistence_file: persistence_file)
 
       # State should be restored
-      assert GenServer.call(counter, :get_count) == 2
+      assert GenServer.call(new_pid, :get_count) == 2
 
       # Clean up the new process
       GenServer.stop(new_pid)
@@ -162,20 +194,27 @@ defmodule MermaidLiveSsr.VisitorCounterTest do
     setup do
       # Create a unique test counter instance
       test_name = :"test_counter_#{System.unique_integer([:positive])}"
+      table_name = :"test_table_#{System.unique_integer([:positive])}"
       persistence_file = "test_visitor_counter_#{System.unique_integer([:positive])}.dat"
 
       # Start a fresh counter instance
       {:ok, pid} =
         VisitorCounter.start_link(
           name: test_name,
-          table_name: :"test_table_#{System.unique_integer([:positive])}",
+          table_name: table_name,
           persistence_file: persistence_file
         )
+
+      # Set up cleanup
+      on_exit(fn ->
+        cleanup_counter(%{pid: pid, table_name: table_name, persistence_file: persistence_file})
+      end)
 
       # Return the test counter module and cleanup info
       %{
         counter: test_name,
         pid: pid,
+        table_name: table_name,
         persistence_file: persistence_file
       }
     end
@@ -202,9 +241,14 @@ defmodule MermaidLiveSsr.VisitorCounterTest do
       external_state = %{"node@external" => 1}
 
       # Merge the same state multiple times
-      count1 = GenServer.call(counter, {:merge_state, external_state})
-      count2 = GenServer.call(counter, {:merge_state, external_state})
-      count3 = GenServer.call(counter, {:merge_state, external_state})
+      GenServer.call(counter, {:merge_state, external_state})
+      count1 = GenServer.call(counter, :get_count)
+
+      GenServer.call(counter, {:merge_state, external_state})
+      count2 = GenServer.call(counter, :get_count)
+
+      GenServer.call(counter, {:merge_state, external_state})
+      count3 = GenServer.call(counter, :get_count)
 
       # Count should not increase with duplicate merges
       assert count1 == 1

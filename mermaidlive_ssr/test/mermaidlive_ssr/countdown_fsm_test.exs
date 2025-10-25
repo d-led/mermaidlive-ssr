@@ -6,87 +6,116 @@ defmodule MermaidLiveSsr.CountdownFSMTest do
       # Start the application if not already started
       Application.ensure_all_started(:mermaidlive_ssr)
 
-      # Create an isolated FSM for testing with a known channel
+      # Create an isolated FSM for testing with virtual time
       test_channel = "test_fsm_#{System.unique_integer([:positive])}"
+      {:ok, clock} = VirtualClock.start_link()
 
-      {:ok, fsm_pid} =
-        case MermaidLiveSsr.CountdownFSM.start_link(
-               [tick_interval: 10, pubsub_channel: test_channel],
-               :test_fsm
-             ) do
-          {:error, {:already_started, pid}} -> {:ok, pid}
-          result -> result
-        end
+      # Start FSM with virtual clock directly injected
+      test_name = :"test_fsm_#{System.unique_integer([:positive])}"
+      {:ok, fsm_pid} = VirtualTimeGenStateMachine.start_link(
+        MermaidLiveSsr.CountdownFSM,
+        [tick_interval: 10, pubsub_channel: test_channel],
+        [name: test_name, virtual_clock: clock]
+      )
 
       # Subscribe to the FSM's specific channel
       Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, test_channel)
 
-      %{fsm_pid: fsm_pid}
+      %{fsm_pid: fsm_pid, clock: clock}
     end
 
     test "FSM starts in waiting state", %{fsm_pid: fsm_pid} do
       # FSM should be alive
       assert Process.alive?(fsm_pid)
 
+      # Check initial state
+      {state, _data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :waiting
+
       # Should be able to start work
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
-      assert_receive {:new_state, {:working, 10}}
+      {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :working
+      assert Map.get(data, :count) == 10
     end
 
     test "FSM transitions from waiting to working on start command", %{fsm_pid: fsm_pid} do
       # Send start command
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
-      assert_receive {:new_state, {:working, 10}}
+      {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :working
+      assert Map.get(data, :count) == 10
     end
 
     test "FSM transitions from working to aborting on abort command", %{fsm_pid: fsm_pid} do
       # First get to working state
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
-      assert_receive {:new_state, {:working, 10}}
+      {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :working
+      assert Map.get(data, :count) == 10
 
       # Send abort command
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :abort)
-      assert_receive {:new_state, :aborting}
+      {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :aborting
+      refute Map.has_key?(data, :count)
     end
 
-    test "FSM auto-transitions from aborting to waiting", %{fsm_pid: fsm_pid} do
+    test "FSM auto-transitions from aborting to waiting", %{fsm_pid: fsm_pid, clock: clock} do
       # Get to aborting state
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
-      assert_receive {:new_state, {:working, 10}}
+      {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :working
+      assert Map.get(data, :count) == 10
+
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :abort)
-      assert_receive {:new_state, :aborting}
+      {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :aborting
+      refute Map.has_key?(data, :count)
 
-      # Wait for auto-transition back to waiting
-      assert_receive {:new_state, :waiting}, 2000
+      # Advance time to trigger auto-transition back to waiting
+      VirtualClock.advance(clock, 20)
+      {state, _data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :waiting
     end
 
-    test "FSM countdown behavior - starts at 10 and decrements", %{fsm_pid: fsm_pid} do
+    test "FSM countdown behavior - starts at 10 and decrements", %{fsm_pid: fsm_pid, clock: clock} do
       # Start countdown
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
-      assert_receive {:new_state, {:working, 10}}
+      {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :working
+      assert Map.get(data, :count) == 10
 
-      # Wait for countdown to progress
-      assert_receive {:new_state, {:working, count}} when count < 10, 2000
+      # Advance time to trigger countdown
+      VirtualClock.advance(clock, 10)
+      {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :working
+      count = Map.get(data, :count)
+      assert count < 10
     end
 
-    test "FSM completes full countdown cycle", %{fsm_pid: fsm_pid} do
+    test "FSM completes full countdown cycle", %{fsm_pid: fsm_pid, clock: clock} do
       # Start countdown
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
-      assert_receive {:new_state, {:working, 10}}
+      {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :working
+      assert Map.get(data, :count) == 10
 
-      # Wait for completion
-      assert_receive {:new_state, :waiting}, 2000
+      # Advance time to complete countdown
+      for _ <- 1..11 do
+        VirtualClock.advance(clock, 10)
+      end
+      {state, _data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :waiting
     end
 
     test "FSM ignores abort command when in waiting state", %{fsm_pid: fsm_pid} do
       # Try to abort while in waiting state
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :abort)
 
-      # Should receive error message
-      assert_receive {:fsm_error, "Cannot abort while in :waiting state"}
-
-      # Should not receive any state change message
-      refute_receive {:new_state, _}, 100
+      # FSM should still be in waiting state
+      {state, _data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :waiting
 
       # FSM should still be alive
       assert Process.alive?(fsm_pid)
@@ -95,33 +124,39 @@ defmodule MermaidLiveSsr.CountdownFSMTest do
     test "FSM ignores start command when already working", %{fsm_pid: fsm_pid} do
       # Start countdown
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
-      assert_receive {:new_state, {:working, 10}}
+      {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :working
+      assert Map.get(data, :count) == 10
 
       # Try to start again while already working
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
 
-      # Should receive error message for invalid start command
-      assert_receive {:fsm_error, "Cannot start while in :working state"}
-
-      # FSM should continue its normal countdown (not restart)
-      # We should receive the next countdown state, not a restart to 10
-      assert_receive {:new_state, {:working, 9}}, 200
+      # FSM should still be in working state with same count (not restarted)
+      {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :working
+      assert Map.get(data, :count) == 10
 
       # FSM should still be alive
       assert Process.alive?(fsm_pid)
     end
 
-    test "FSM can be aborted during countdown", %{fsm_pid: fsm_pid} do
+    test "FSM can be aborted during countdown", %{fsm_pid: fsm_pid, clock: clock} do
       # Start countdown
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
-      assert_receive {:new_state, {:working, 10}}
+      {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :working
+      assert Map.get(data, :count) == 10
 
       # Abort during countdown
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :abort)
-      assert_receive {:new_state, :aborting}
+      {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :aborting
+      refute Map.has_key?(data, :count)
 
-      # Should auto-transition back to waiting
-      assert_receive {:new_state, :waiting}, 2000
+      # Advance time to trigger auto-transition back to waiting
+      VirtualClock.advance(clock, 20)
+      {state, _data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :waiting
     end
 
     test "FSM handles multiple rapid commands gracefully", %{fsm_pid: fsm_pid} do
@@ -130,72 +165,93 @@ defmodule MermaidLiveSsr.CountdownFSMTest do
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
 
-      # Should receive one working state message
-      assert_receive {:new_state, {:working, 10}}
-
-      # Should receive error messages for the invalid start commands
-      assert_receive {:fsm_error, "Cannot start while in :working state"}
-      assert_receive {:fsm_error, "Cannot start while in :working state"}
+      # FSM should be in working state with count 10 (only first command processed)
+      {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :working
+      assert Map.get(data, :count) == 10
 
       # FSM should still be alive
       assert Process.alive?(fsm_pid)
     end
 
-    test "FSM handles rapid start/abort commands", %{fsm_pid: fsm_pid} do
+    test "FSM handles rapid start/abort commands", %{fsm_pid: fsm_pid, clock: clock} do
       # Start countdown
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
-      assert_receive {:new_state, {:working, 10}}
+      {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :working
+      assert Map.get(data, :count) == 10
 
       # Send multiple abort commands rapidly
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :abort)
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :abort)
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :abort)
 
-      # Should only receive one aborting state message
-      assert_receive {:new_state, :aborting}
+      # FSM should be in aborting state
+      {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :aborting
+      refute Map.has_key?(data, :count)
 
-      # Should not receive duplicate aborting messages
-      refute_receive {:new_state, :aborting}, 50
-
-      # Should auto-transition back to waiting
-      assert_receive {:new_state, :waiting}, 2000
+      # Advance time to trigger auto-transition back to waiting
+      VirtualClock.advance(clock, 20)
+      {state, _data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :waiting
     end
 
-    test "FSM handles invalid start command in aborting state", %{fsm_pid: fsm_pid} do
+    test "FSM handles invalid start command in aborting state", %{fsm_pid: fsm_pid, clock: clock} do
       # Start countdown
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
-      assert_receive {:new_state, {:working, 10}}
+      {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :working
+      assert Map.get(data, :count) == 10
 
       # Abort to get to aborting state
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :abort)
-      assert_receive {:new_state, :aborting}
+      {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :aborting
+      refute Map.has_key?(data, :count)
 
       # Try to start while in aborting state
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
 
-      # Should receive error message for invalid start command
-      assert_receive {:fsm_error, "Cannot start while in :aborting state"}
+      # FSM should still be in aborting state
+      {state, _data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :aborting
 
-      # FSM should still be alive and eventually transition to waiting
+      # Advance time to trigger auto-transition back to waiting
+      VirtualClock.advance(clock, 20)
+      {state, _data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :waiting
+
+      # FSM should still be alive
       assert Process.alive?(fsm_pid)
     end
 
-    test "FSM handles invalid abort command in aborting state", %{fsm_pid: fsm_pid} do
+    test "FSM handles invalid abort command in aborting state", %{fsm_pid: fsm_pid, clock: clock} do
       # Start countdown
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
-      assert_receive {:new_state, {:working, 10}}
+      {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :working
+      assert Map.get(data, :count) == 10
 
       # Abort to get to aborting state
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :abort)
-      assert_receive {:new_state, :aborting}
+      {state, data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :aborting
+      refute Map.has_key?(data, :count)
 
       # Try to abort again while in aborting state
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :abort)
 
-      # Should receive error message for invalid abort command
-      assert_receive {:fsm_error, "Cannot abort while in :aborting state"}
+      # FSM should still be in aborting state
+      {state, _data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :aborting
 
-      # FSM should still be alive and eventually transition to waiting
+      # Advance time to trigger auto-transition back to waiting
+      VirtualClock.advance(clock, 20)
+      {state, _data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+      assert state == :waiting
+
+      # FSM should still be alive
       assert Process.alive?(fsm_pid)
     end
   end

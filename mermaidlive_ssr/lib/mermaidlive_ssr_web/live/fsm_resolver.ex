@@ -48,9 +48,9 @@ defmodule MermaidLiveSsrWeb.Live.FsmResolver do
           fsm_ref
         end
 
-      # Default to global FSM
+      # Default to global FSM - get PID from supervisor since name registration is broken
       true ->
-        MermaidLiveSsr.CountdownFSM
+        get_global_fsm_pid()
     end
   end
 
@@ -119,6 +119,22 @@ defmodule MermaidLiveSsrWeb.Live.FsmResolver do
       # For other cases, use default
       true ->
         Constants.fsm_updates_channel()
+    end
+  end
+
+  @doc """
+  Gets the PID of the global FSM from the supervisor.
+  """
+  def get_global_fsm_pid do
+    children = Supervisor.which_children(MermaidLiveSsr.Supervisor)
+    fsm_entry = Enum.find(children, fn {id, _pid, _type, _modules} -> id == MermaidLiveSsr.CountdownFSM end)
+
+    if fsm_entry do
+      {_id, fsm_pid, _type, _modules} = fsm_entry
+      fsm_pid
+    else
+      # Fallback to module name if not found
+      MermaidLiveSsr.CountdownFSM
     end
   end
 end

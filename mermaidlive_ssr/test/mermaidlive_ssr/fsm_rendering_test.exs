@@ -17,14 +17,28 @@ defmodule MermaidLiveSsr.FsmRenderingTest do
     end
   end
 
+  # Helper function to get the FSM PID from supervisor
+  defp get_fsm_pid do
+    children = Supervisor.which_children(MermaidLiveSsr.Supervisor)
+    fsm_child = Enum.find(children, fn {id, _, _, _} -> id == MermaidLiveSsr.CountdownFSM end)
+    if fsm_child do
+      {_, pid, _, _} = fsm_child
+      pid
+    else
+      nil
+    end
+  end
+
   describe "FSM Core States (based on Go version)" do
     setup do
       # Start the application if not already started
       Application.ensure_all_started(:mermaidlive_ssr)
 
-      # Use global FSM for testing and reset it to waiting state
-      fsm_pid = MermaidLiveSsr.CountdownFSM
-      reset_fsm_to_waiting(fsm_pid)
+      # Get FSM PID from supervisor
+      fsm_pid = get_fsm_pid()
+      if fsm_pid do
+        reset_fsm_to_waiting(fsm_pid)
+      end
 
       %{fsm_pid: fsm_pid}
     end
@@ -38,7 +52,7 @@ defmodule MermaidLiveSsr.FsmRenderingTest do
     test "waiting -> working transition on start command", %{fsm_pid: fsm_pid} do
       # Send start command from waiting state
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
-      Process.sleep(100)
+      Process.sleep(50)
 
       # Should transition to working state
       assert {:ok, diagram} = MermaidLiveSsr.FsmRendering.get_last_rendered_diagram()
@@ -48,11 +62,11 @@ defmodule MermaidLiveSsr.FsmRenderingTest do
     test "working -> aborting transition on abort command", %{fsm_pid: fsm_pid} do
       # Start the FSM (waiting -> working)
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
-      Process.sleep(100)
+      Process.sleep(50)
 
       # Send abort command (working -> aborting)
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :abort)
-      Process.sleep(100)
+      Process.sleep(50)
 
       # Should be in aborting state
       assert {:ok, diagram} = MermaidLiveSsr.FsmRendering.get_last_rendered_diagram()
@@ -62,9 +76,9 @@ defmodule MermaidLiveSsr.FsmRenderingTest do
     test "aborting -> waiting auto-transition after delay", %{fsm_pid: fsm_pid} do
       # Complete cycle: waiting -> working -> aborting -> waiting
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
-      Process.sleep(100)
+      Process.sleep(50)
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :abort)
-      Process.sleep(100)
+      Process.sleep(50)
 
       # Wait for auto-transition back to waiting (1 second delay)
       Process.sleep(1200)
@@ -85,7 +99,7 @@ defmodule MermaidLiveSsr.FsmRenderingTest do
     test "abort command ignored in waiting state", %{fsm_pid: fsm_pid} do
       # Try to abort when in waiting state (invalid transition)
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :abort)
-      Process.sleep(100)
+      Process.sleep(50)
 
       # Should remain in waiting state
       assert {:ok, diagram} = MermaidLiveSsr.FsmRendering.get_last_rendered_diagram()
@@ -95,11 +109,11 @@ defmodule MermaidLiveSsr.FsmRenderingTest do
     test "start command ignored in working state", %{fsm_pid: fsm_pid} do
       # Start the FSM
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
-      Process.sleep(100)
+      Process.sleep(50)
 
       # Try to start again (invalid transition)
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
-      Process.sleep(100)
+      Process.sleep(50)
 
       # Should remain in working state
       assert {:ok, diagram} = MermaidLiveSsr.FsmRendering.get_last_rendered_diagram()
@@ -109,13 +123,13 @@ defmodule MermaidLiveSsr.FsmRenderingTest do
     test "start command ignored in aborting state", %{fsm_pid: fsm_pid} do
       # Start and abort the FSM
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
-      Process.sleep(100)
+      Process.sleep(50)
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :abort)
-      Process.sleep(100)
+      Process.sleep(50)
 
       # Try to start while aborting (invalid transition)
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
-      Process.sleep(100)
+      Process.sleep(50)
 
       # Should remain in aborting state
       assert {:ok, diagram} = MermaidLiveSsr.FsmRendering.get_last_rendered_diagram()
@@ -138,8 +152,8 @@ defmodule MermaidLiveSsr.FsmRenderingTest do
     test "countdown shows counter in working state", %{fsm_pid: fsm_pid} do
       # Start the FSM
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
-      # Wait for state transition (isolated FSM ticks every 100ms)
-      Process.sleep(200)
+      # Wait for state transition (isolated FSM ticks every 10ms)
+      Process.sleep(50)
 
       # For now, just test that the FSM can be started without crashing
       # The render_fsm_state function needs to be fixed separately
@@ -153,7 +167,7 @@ defmodule MermaidLiveSsr.FsmRenderingTest do
 
       # Abort the FSM
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :abort)
-      Process.sleep(100)
+      Process.sleep(50)
 
       # Wait to ensure countdown stopped
       Process.sleep(1000)
@@ -190,7 +204,7 @@ defmodule MermaidLiveSsr.FsmRenderingTest do
     test "isolated FSM commands are handled independently" do
       # Start global FSM
       MermaidLiveSsr.FsmRendering.send_command(:start)
-      Process.sleep(100)
+      Process.sleep(50)
 
       # Send isolated command (should not affect global FSM)
       # Note: This test is no longer valid since we removed fake isolated FSMs

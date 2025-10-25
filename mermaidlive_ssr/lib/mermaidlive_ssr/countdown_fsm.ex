@@ -6,7 +6,7 @@ defmodule MermaidLiveSsr.CountdownFSM do
   waiting, working, and aborting states. It's used to manage countdown timers
   for visitor interactions.
   """
-  @behaviour :gen_statem
+  use VirtualTimeGenStateMachine, callback_mode: :handle_event_function
 
   @fsm_updates_channel "fsm_updates"
   @default_tick_interval 100
@@ -14,22 +14,18 @@ defmodule MermaidLiveSsr.CountdownFSM do
   @test_tick_interval 10
 
   # Public API
-  def start_link(opts \\ []) do
-    :gen_statem.start_link({:local, __MODULE__}, __MODULE__, opts, [])
-  end
-
-  def start_link(opts, name) when is_atom(name) do
-    :gen_statem.start_link({:local, name}, __MODULE__, opts, [])
+  def start_link(opts \\ [], name \\ __MODULE__) do
+    VirtualTimeGenStateMachine.start_link(__MODULE__, opts, [name: name])
   end
 
   # Send command to FSM (supports both named and PID references)
   def send_command(fsm \\ __MODULE__, command) do
-    :gen_statem.cast(fsm, command)
+    VirtualTimeGenStateMachine.cast(fsm, command)
   end
 
   # Get current state of FSM (supports both named and PID references)
   def get_state(fsm \\ __MODULE__) do
-    :gen_statem.call(fsm, :get_state)
+    VirtualTimeGenStateMachine.call(fsm, :get_state)
   end
 
   # Helper function to get the channel for a specific FSM PID
@@ -89,96 +85,93 @@ defmodule MermaidLiveSsr.CountdownFSM do
   def child_spec(args) do
     %{
       id: __MODULE__,
-      start: {__MODULE__, :start_link, [args]},
+      start: {__MODULE__, :start_link, [args, __MODULE__]},
       restart: :permanent,
       shutdown: 5000,
       type: :worker
     }
   end
 
-  @impl true
-  def callback_mode, do: :state_functions
-
-  # State: Waiting
-  def waiting(:cast, :start, data) do
+  # Handle events for all states
+  def handle_event(:cast, :start, :waiting, data) do
     tick_interval = Map.get(data, :tick_interval, @default_tick_interval)
     publish_state_change({:working, 10}, data)
-    {:next_state, :working, Map.put(data, :count, 10), {:state_timeout, tick_interval, :tick}}
+
+    # Schedule the first tick using virtual time
+    VirtualTimeGenStateMachine.send_after(self(), :tick, tick_interval)
+    {:next_state, :working, Map.put(data, :count, 10)}
   end
 
-  def waiting(:cast, :abort, data) do
+  def handle_event(:cast, :abort, :waiting, data) do
     publish_fsm_error("Cannot abort while in :waiting state", data)
     :keep_state_and_data
   end
 
-  def waiting(_event, _content, _data) do
-    :keep_state_and_data
-  end
-
-  # State: Working
-  def working(:state_timeout, :tick, %{count: 1} = data) do
+  def handle_event(:info, :tick, :working, %{count: 1} = data) do
     # when finished - publish WorkDone event
     publish_work_done_event(data)
     publish_state_change(:waiting, data)
     {:next_state, :waiting, Map.delete(data, :count)}
   end
 
-  def working(:state_timeout, :tick, %{count: count, tick_interval: tick_interval} = data)
+  def handle_event(:info, :tick, :working, %{count: count, tick_interval: tick_interval} = data)
       when count > 1 do
     new_count = count - 1
     # Publish state change first, then tick event
     publish_state_change({:working, new_count}, data)
     # Publish tick event after state change to ensure it's the last event
     publish_tick_event(count, data)
-    {:keep_state, Map.put(data, :count, new_count), {:state_timeout, tick_interval, :tick}}
+
+    # Schedule the next tick using virtual time
+    VirtualTimeGenStateMachine.send_after(self(), :tick, tick_interval)
+    {:keep_state, Map.put(data, :count, new_count)}
   end
 
-  def working(:state_timeout, :tick, data) do
+  def handle_event(:info, :tick, :working, data) do
     # Handle case where count is not in data (shouldn't happen but for safety)
     publish_state_change(:waiting, data)
     {:next_state, :waiting, data}
   end
 
-  def working(:cast, :abort, data) do
+  def handle_event(:cast, :abort, :working, data) do
     tick_interval = Map.get(data, :tick_interval, @default_tick_interval)
     publish_state_change(:aborting, data)
-    {:next_state, :aborting, Map.delete(data, :count), {:state_timeout, tick_interval, :linger}}
+
+    # Schedule linger timeout using virtual time
+    VirtualTimeGenStateMachine.send_after(self(), :linger, tick_interval)
+    {:next_state, :aborting, Map.delete(data, :count)}
   end
 
-  def working(:cast, :start, data) do
+  def handle_event(:cast, :start, :working, data) do
     publish_fsm_error("Cannot start while in :working state", data)
     :keep_state_and_data
   end
 
-  def working(_event, _content, _data) do
-    :keep_state_and_data
-  end
-
-  # State: Aborting
-  def aborting(:state_timeout, :linger, data) do
+  def handle_event(:info, :linger, :aborting, data) do
     # Publish WorkAborted event before transitioning to waiting
     publish_work_aborted_event(data)
     publish_state_change(:waiting, data)
     {:next_state, :waiting, data}
   end
 
-  def aborting(:cast, :start, data) do
+  def handle_event(:cast, :start, :aborting, data) do
     publish_fsm_error("Cannot start while in :aborting state", data)
     :keep_state_and_data
   end
 
-  def aborting(:cast, :abort, data) do
+  def handle_event(:cast, :abort, :aborting, data) do
     publish_fsm_error("Cannot abort while in :aborting state", data)
     :keep_state_and_data
   end
 
-  def aborting(_event, _content, _data) do
-    :keep_state_and_data
+  # Handle get_state call - works in handle_event_function mode
+  def handle_event({:call, from}, :get_state, state, data) do
+    {:keep_state_and_data, [{:reply, from, {state, data}}]}
   end
 
-  # Handle get_state call - works in state_functions mode
-  def handle_call(:get_state, _from, state, data) do
-    {:reply, {state, data}, state, data}
+  # Catch-all for unhandled events
+  def handle_event(_event_type, _event_content, _state, _data) do
+    :keep_state_and_data
   end
 
   defp publish_state_change(new_state, %{pubsub_channel: channel}) do

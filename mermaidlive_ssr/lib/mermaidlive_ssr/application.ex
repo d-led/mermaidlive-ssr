@@ -18,14 +18,7 @@ defmodule MermaidLiveSsr.Application do
         [
           {Phoenix.PubSub, name: MermaidLiveSsr.PubSub},
           MermaidLiveSsrWeb.Presence,
-          %{
-            id: MermaidLiveSsr.CountdownFSM,
-            start: {MermaidLiveSsr.CountdownFSM, :start_link, [[tick_interval: 1000]]},
-            restart: :permanent,
-            shutdown: 5000,
-            type: :worker,
-            name: MermaidLiveSsr.CountdownFSM
-          },
+          {MermaidLiveSsr.CountdownFSM, [tick_interval: 1000]},
           MermaidLiveSsr.FsmRendering,
           MermaidLiveSsr.VisitorCounter,
           MermaidLiveSsrWeb.Endpoint
