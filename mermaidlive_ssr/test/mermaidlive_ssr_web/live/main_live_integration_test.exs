@@ -13,11 +13,13 @@ defmodule MermaidLiveSsrWeb.MainLiveIntegrationTest do
       test_channel = "test_fsm_#{System.unique_integer([:positive])}"
 
       # Create a test FSM with virtual clock injected at start_link time
-      {:ok, fsm_pid} = VirtualTimeGenStateMachine.start_link(
-        MermaidLiveSsr.CountdownFSM,
-        [tick_interval: 10, pubsub_channel: test_channel],
-        [name: test_name, virtual_clock: clock]
-      )
+      {:ok, fsm_pid} =
+        VirtualTimeGenStateMachine.start_link(
+          MermaidLiveSsr.CountdownFSM,
+          [tick_interval: 10, pubsub_channel: test_channel],
+          name: test_name,
+          virtual_clock: clock
+        )
 
       on_exit(fn ->
         if Process.alive?(fsm_pid), do: GenServer.stop(fsm_pid)

@@ -12,11 +12,14 @@ defmodule MermaidLiveSsr.FsmVirtualTimeTest do
       # Create test FSM with virtual clock directly injected
       test_name = :"test_fsm_#{System.unique_integer([:positive])}"
       test_channel = "test_fsm_#{System.unique_integer([:positive])}"
-      {:ok, fsm_pid} = VirtualTimeGenStateMachine.start_link(
-        MermaidLiveSsr.CountdownFSM,
-        [tick_interval: 10, pubsub_channel: test_channel],
-        [name: test_name, virtual_clock: clock]
-      )
+
+      {:ok, fsm_pid} =
+        VirtualTimeGenStateMachine.start_link(
+          MermaidLiveSsr.CountdownFSM,
+          [tick_interval: 10, pubsub_channel: test_channel],
+          name: test_name,
+          virtual_clock: clock
+        )
 
       # Subscribe to FSM updates
       Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, test_channel)
@@ -84,11 +87,14 @@ defmodule MermaidLiveSsr.FsmVirtualTimeTest do
       # Create test FSM with virtual clock directly injected
       test_name = :"test_fsm_#{System.unique_integer([:positive])}"
       test_channel = "test_fsm_#{System.unique_integer([:positive])}"
-      {:ok, fsm_pid} = VirtualTimeGenStateMachine.start_link(
-        MermaidLiveSsr.CountdownFSM,
-        [tick_interval: 10, pubsub_channel: test_channel],
-        [name: test_name, virtual_clock: clock]
-      )
+
+      {:ok, fsm_pid} =
+        VirtualTimeGenStateMachine.start_link(
+          MermaidLiveSsr.CountdownFSM,
+          [tick_interval: 10, pubsub_channel: test_channel],
+          name: test_name,
+          virtual_clock: clock
+        )
 
       # Subscribe to FSM updates
       Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, test_channel)
@@ -151,11 +157,14 @@ defmodule MermaidLiveSsr.FsmVirtualTimeTest do
       # Create test FSM with virtual clock directly injected
       test_name = :"test_fsm_#{System.unique_integer([:positive])}"
       test_channel = "test_fsm_#{System.unique_integer([:positive])}"
-      {:ok, fsm_pid} = VirtualTimeGenStateMachine.start_link(
-        MermaidLiveSsr.CountdownFSM,
-        [tick_interval: 10, pubsub_channel: test_channel],
-        [name: test_name, virtual_clock: clock]
-      )
+
+      {:ok, fsm_pid} =
+        VirtualTimeGenStateMachine.start_link(
+          MermaidLiveSsr.CountdownFSM,
+          [tick_interval: 10, pubsub_channel: test_channel],
+          name: test_name,
+          virtual_clock: clock
+        )
 
       # Subscribe to FSM updates
       Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, test_channel)
@@ -186,7 +195,8 @@ defmodule MermaidLiveSsr.FsmVirtualTimeTest do
         {:new_state, {:working, 9}} -> :ok
         other -> flunk("Unexpected message: #{inspect(other)}")
       after
-        0 -> :ok  # Message might not be sent if FSM is not using PubSub
+        # Message might not be sent if FSM is not using PubSub
+        0 -> :ok
       end
 
       # Advance time again
@@ -244,7 +254,8 @@ defmodule MermaidLiveSsr.FsmVirtualTimeTest do
       # Advance time step by step to ensure all timers fire
       for _ <- 1..11 do
         VirtualClock.advance(clock, 10)
-        Process.sleep(1)  # Give time for the timer to fire
+        # Give time for the timer to fire
+        Process.sleep(1)
       end
 
       # Should complete and return to waiting
@@ -274,7 +285,8 @@ defmodule MermaidLiveSsr.FsmVirtualTimeTest do
       refute Map.has_key?(data, :count)
 
       # Complete abort - use step-by-step advancement to ensure linger timeout fires
-      VirtualClock.advance(clock, 20)  # Full linger timeout with buffer
+      # Full linger timeout with buffer
+      VirtualClock.advance(clock, 20)
 
       # Check final state instead of relying on message
       {state, _data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
@@ -305,11 +317,14 @@ defmodule MermaidLiveSsr.FsmVirtualTimeTest do
       # Create test FSM with virtual clock directly injected
       test_name = :"test_fsm_#{System.unique_integer([:positive])}"
       test_channel = "test_fsm_#{System.unique_integer([:positive])}"
-      {:ok, fsm_pid} = VirtualTimeGenStateMachine.start_link(
-        MermaidLiveSsr.CountdownFSM,
-        [tick_interval: 10, pubsub_channel: test_channel],
-        [name: test_name, virtual_clock: clock]
-      )
+
+      {:ok, fsm_pid} =
+        VirtualTimeGenStateMachine.start_link(
+          MermaidLiveSsr.CountdownFSM,
+          [tick_interval: 10, pubsub_channel: test_channel],
+          name: test_name,
+          virtual_clock: clock
+        )
 
       # Subscribe to FSM updates
       Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, test_channel)
@@ -325,7 +340,8 @@ defmodule MermaidLiveSsr.FsmVirtualTimeTest do
       # Advance time step by step to ensure all timers fire
       for _ <- 1..11 do
         VirtualClock.advance(clock, 10)
-        Process.sleep(1)  # Give time for the timer to fire
+        # Give time for the timer to fire
+        Process.sleep(1)
       end
 
       # Check final state instead of relying on message
@@ -341,7 +357,8 @@ defmodule MermaidLiveSsr.FsmVirtualTimeTest do
       # Advance time step by step to ensure all timers fire
       for _ <- 1..11 do
         VirtualClock.advance(clock, 10)
-        Process.sleep(1)  # Give time for the timer to fire
+        # Give time for the timer to fire
+        Process.sleep(1)
       end
 
       {state, _data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
@@ -354,7 +371,8 @@ defmodule MermaidLiveSsr.FsmVirtualTimeTest do
       # Advance time step by step
       for _ <- 1..11 do
         VirtualClock.advance(clock, 10)
-        Process.sleep(1)  # Give time for the timer to fire
+        # Give time for the timer to fire
+        Process.sleep(1)
       end
 
       {state, _data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
@@ -367,7 +385,8 @@ defmodule MermaidLiveSsr.FsmVirtualTimeTest do
       # Advance time step by step
       for _ <- 1..11 do
         VirtualClock.advance(clock, 10)
-        Process.sleep(1)  # Give time for the timer to fire
+        # Give time for the timer to fire
+        Process.sleep(1)
       end
 
       {state, _data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)

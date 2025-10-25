@@ -56,7 +56,6 @@ defmodule MermaidLiveSsr.VisitorCounterTest do
       # and other parts of the application. The test-specific table is cleaned up above.
     end
 
-
     test "counter starts with zero count", %{counter: counter} do
       count = GenServer.call(counter, :get_count)
       assert count == 0

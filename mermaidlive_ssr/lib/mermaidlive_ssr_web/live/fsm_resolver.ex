@@ -127,7 +127,9 @@ defmodule MermaidLiveSsrWeb.Live.FsmResolver do
   """
   def get_global_fsm_pid do
     children = Supervisor.which_children(MermaidLiveSsr.Supervisor)
-    fsm_entry = Enum.find(children, fn {id, _pid, _type, _modules} -> id == MermaidLiveSsr.CountdownFSM end)
+
+    fsm_entry =
+      Enum.find(children, fn {id, _pid, _type, _modules} -> id == MermaidLiveSsr.CountdownFSM end)
 
     if fsm_entry do
       {_id, fsm_pid, _type, _modules} = fsm_entry

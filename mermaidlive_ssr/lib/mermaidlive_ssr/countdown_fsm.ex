@@ -15,7 +15,7 @@ defmodule MermaidLiveSsr.CountdownFSM do
 
   # Public API
   def start_link(opts \\ [], name \\ __MODULE__) do
-    VirtualTimeGenStateMachine.start_link(__MODULE__, opts, [name: name])
+    VirtualTimeGenStateMachine.start_link(__MODULE__, opts, name: name)
   end
 
   # Send command to FSM (supports both named and PID references)

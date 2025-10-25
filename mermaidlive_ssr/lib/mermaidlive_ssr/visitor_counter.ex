@@ -18,7 +18,7 @@ defmodule MermaidLiveSsr.VisitorCounter do
 
   def start_link(opts \\ []) do
     name = Keyword.get(opts, :name, __MODULE__)
-    VirtualTimeGenServer.start_link(__MODULE__, opts, [name: name])
+    VirtualTimeGenServer.start_link(__MODULE__, opts, name: name)
   end
 
   @doc """

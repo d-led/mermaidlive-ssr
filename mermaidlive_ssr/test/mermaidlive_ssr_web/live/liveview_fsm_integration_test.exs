@@ -21,6 +21,7 @@ defmodule MermaidLiveSsrWeb.Live.LiveViewFsmIntegrationTest do
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
       Process.sleep(50)
       {state, _data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
+
       # FSM should be in working state after start command (unless it's aborting from previous test)
       assert state in [:working, :aborting]
     end
@@ -28,10 +29,12 @@ defmodule MermaidLiveSsrWeb.Live.LiveViewFsmIntegrationTest do
     test "FSM is injectable for testing with virtual time" do
       # Create a test FSM with virtual time
       {:ok, clock} = VirtualClock.start_link()
-      {:ok, fsm_pid} = MermaidLiveSsr.CountdownFSM.start_link(
-        [tick_interval: 100, virtual_clock: clock],
-        :test_fsm
-      )
+
+      {:ok, fsm_pid} =
+        MermaidLiveSsr.CountdownFSM.start_link(
+          [tick_interval: 100, virtual_clock: clock],
+          :test_fsm
+        )
 
       # Test that FSM works with virtual time
       {state, _data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)

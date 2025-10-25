@@ -9,8 +9,10 @@ defmodule MermaidLiveSsr.FsmRenderingTest do
         receive do
           {:new_state, :waiting} -> :ok
         after
-          2000 -> :ok  # Timeout after 2 seconds
+          # Timeout after 2 seconds
+          2000 -> :ok
         end
+
       _ ->
         # FSM is not in aborting state, we can proceed
         :ok
@@ -21,6 +23,7 @@ defmodule MermaidLiveSsr.FsmRenderingTest do
   defp get_fsm_pid do
     children = Supervisor.which_children(MermaidLiveSsr.Supervisor)
     fsm_child = Enum.find(children, fn {id, _, _, _} -> id == MermaidLiveSsr.CountdownFSM end)
+
     if fsm_child do
       {_, pid, _, _} = fsm_child
       pid
@@ -36,6 +39,7 @@ defmodule MermaidLiveSsr.FsmRenderingTest do
 
       # Get FSM PID from supervisor
       fsm_pid = get_fsm_pid()
+
       if fsm_pid do
         reset_fsm_to_waiting(fsm_pid)
       end

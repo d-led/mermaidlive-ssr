@@ -12,11 +12,13 @@ defmodule MermaidLiveSsr.FsmInjectabilityTest do
       test_channel = "test_fsm_#{System.unique_integer([:positive])}"
 
       # Create a test FSM with virtual clock injected at start_link time
-      {:ok, fsm_pid} = VirtualTimeGenStateMachine.start_link(
-        MermaidLiveSsr.CountdownFSM,
-        [tick_interval: 10, pubsub_channel: test_channel],
-        [name: test_name, virtual_clock: clock]
-      )
+      {:ok, fsm_pid} =
+        VirtualTimeGenStateMachine.start_link(
+          MermaidLiveSsr.CountdownFSM,
+          [tick_interval: 10, pubsub_channel: test_channel],
+          name: test_name,
+          virtual_clock: clock
+        )
 
       # Test that the FSM works with virtual time
       {state, _data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)
@@ -59,11 +61,12 @@ defmodule MermaidLiveSsr.FsmInjectabilityTest do
       test_channel = "test_fsm_#{System.unique_integer([:positive])}"
 
       # Create a test FSM without virtual clock (uses real time)
-      {:ok, fsm_pid} = VirtualTimeGenStateMachine.start_link(
-        MermaidLiveSsr.CountdownFSM,
-        [tick_interval: 50, pubsub_channel: test_channel],
-        [name: test_name]
-      )
+      {:ok, fsm_pid} =
+        VirtualTimeGenStateMachine.start_link(
+          MermaidLiveSsr.CountdownFSM,
+          [tick_interval: 50, pubsub_channel: test_channel],
+          name: test_name
+        )
 
       # Test that the FSM works with real time
       {state, _data} = MermaidLiveSsr.CountdownFSM.get_state(fsm_pid)

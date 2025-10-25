@@ -34,7 +34,6 @@ if fsm_child do
   {state, data} = MermaidLiveSsr.CountdownFSM.get_state(pid)
   IO.puts("After abort - State: #{state}")
   IO.puts("After abort - Data: #{inspect(data)}")
-
 else
   IO.puts("FSM not found in supervisor!")
 end

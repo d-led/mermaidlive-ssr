@@ -12,10 +12,12 @@ defmodule MermaidLiveSsr.VisitorCounterDebouncedPersistenceTest do
 
     # Start a test instance of VisitorCounter with global virtual time
     test_name = :"test_visitor_counter_#{System.unique_integer([:positive])}"
-    {:ok, pid} = VisitorCounter.start_link(
-      name: test_name,
-      persistence_file: @test_file
-    )
+
+    {:ok, pid} =
+      VisitorCounter.start_link(
+        name: test_name,
+        persistence_file: @test_file
+      )
 
     # Ensure we start with a clean state
     File.rm(@test_file)
@@ -115,7 +117,11 @@ defmodule MermaidLiveSsr.VisitorCounterDebouncedPersistenceTest do
       refute File.exists?(@test_file)
     end
 
-    test "resets has_changes flag after persistence", %{counter_pid: _pid, test_name: test_name, clock: clock} do
+    test "resets has_changes flag after persistence", %{
+      counter_pid: _pid,
+      test_name: test_name,
+      clock: clock
+    } do
       # Increment once
       GenServer.call(test_name, :increment)
 

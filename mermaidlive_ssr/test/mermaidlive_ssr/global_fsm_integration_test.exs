@@ -7,12 +7,14 @@ defmodule MermaidLiveSsr.GlobalFsmIntegrationTest do
       {:ok, clock} = VirtualClock.start_link()
       test_name = :"test_fsm_#{System.unique_integer([:positive])}"
       test_channel = "test_fsm_#{System.unique_integer([:positive])}"
-      
-      {:ok, fsm_pid} = VirtualTimeGenStateMachine.start_link(
-        MermaidLiveSsr.CountdownFSM,
-        [tick_interval: 100, pubsub_channel: test_channel],
-        [name: test_name, virtual_clock: clock]
-      )
+
+      {:ok, fsm_pid} =
+        VirtualTimeGenStateMachine.start_link(
+          MermaidLiveSsr.CountdownFSM,
+          [tick_interval: 100, pubsub_channel: test_channel],
+          name: test_name,
+          virtual_clock: clock
+        )
 
       # Subscribe to FSM updates
       Phoenix.PubSub.subscribe(MermaidLiveSsr.PubSub, test_channel)
@@ -56,7 +58,10 @@ defmodule MermaidLiveSsr.GlobalFsmIntegrationTest do
       refute Map.has_key?(data, :count)
     end
 
-    test "FSM auto-transitions from aborting to waiting with virtual time", %{fsm_pid: fsm_pid, clock: clock} do
+    test "FSM auto-transitions from aborting to waiting with virtual time", %{
+      fsm_pid: fsm_pid,
+      clock: clock
+    } do
       # Start and abort the FSM
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :abort)

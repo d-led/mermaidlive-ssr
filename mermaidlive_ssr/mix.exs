@@ -18,6 +18,12 @@ defmodule MermaidLiveSsr.MixProject do
         plt_add_apps: [:mix],
         # Ignore specific warnings
         ignore_warnings: ".dialyzer_ignore.exs"
+      ],
+      docs: [
+        main: "MermaidLiveSsr",
+        extras: ["README.md"],
+        source_url: "https://github.com/dmitryledentsov/mermaidlive-ssr",
+        source_ref: "main"
       ]
     ]
   end
@@ -70,7 +76,8 @@ defmodule MermaidLiveSsr.MixProject do
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: :test},
-      {:junit_formatter, "~> 3.3", only: :test}
+      {:junit_formatter, "~> 3.3", only: :test},
+      {:ex_doc, "~> 0.31", only: :dev, runtime: false}
     ]
   end
 

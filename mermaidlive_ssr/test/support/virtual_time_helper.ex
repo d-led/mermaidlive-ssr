@@ -45,6 +45,7 @@ defmodule MermaidLiveSsr.VirtualTimeHelper do
   """
   def with_virtual_clock(fun) do
     {clock, cleanup} = setup_virtual_clock()
+
     try do
       fun.({clock, cleanup})
     after
@@ -69,7 +70,8 @@ defmodule MermaidLiveSsr.VirtualTimeHelper do
     case VirtualTimeGenStateMachine.start_link(
            MermaidLiveSsr.CountdownFSM,
            test_opts,
-           [name: test_name, virtual_clock: clock]
+           name: test_name,
+           virtual_clock: clock
          ) do
       {:ok, fsm_pid} -> {fsm_pid, clock}
       {:error, {:already_started, pid}} -> {pid, clock}
@@ -91,7 +93,8 @@ defmodule MermaidLiveSsr.VirtualTimeHelper do
     case VirtualTimeGenStateMachine.start_link(
            MermaidLiveSsr.CountdownFSM,
            test_opts,
-           [name: test_name, virtual_clock: clock]
+           name: test_name,
+           virtual_clock: clock
          ) do
       {:ok, fsm_pid} -> {fsm_pid, clock}
       {:error, {:already_started, pid}} -> {pid, clock}
