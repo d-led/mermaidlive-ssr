@@ -18,7 +18,11 @@ defmodule MermaidLiveSsr.VisitorCounter do
 
   def start_link(opts \\ []) do
     name = Keyword.get(opts, :name, __MODULE__)
-    VirtualTimeGenServer.start_link(__MODULE__, opts, name: name)
+    # Extract init-specific opts (table_name, persistence_file)
+    # vs start_link opts (name, virtual_clock, real_time, etc.)
+    init_opts = Keyword.take(opts, [:table_name, :persistence_file])
+    server_opts = Keyword.drop(opts, [:table_name, :persistence_file])
+    VirtualTimeGenServer.start_link(__MODULE__, init_opts, [name: name] ++ server_opts)
   end
 
   @doc """
@@ -276,7 +280,7 @@ defmodule MermaidLiveSsr.VisitorCounter do
 
   defp schedule_debounced_persistence(%{debounce_timer: timer} = server_state) do
     # Cancel existing timer and schedule a new one
-    Process.cancel_timer(timer)
+    VirtualTimeGenServer.cancel_timer(timer)
     new_timer = VirtualTimeGenServer.send_after(self(), :debounced_persist_state, 1000)
     %{server_state | debounce_timer: new_timer}
   end

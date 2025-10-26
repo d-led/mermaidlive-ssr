@@ -1,5 +1,5 @@
 defmodule MermaidLiveSsr.VisitorCounterTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   alias MermaidLiveSsr.VisitorCounter
 
@@ -130,20 +130,35 @@ defmodule MermaidLiveSsr.VisitorCounterTest do
       # Create a unique test counter instance
       test_name = :"test_counter_#{System.unique_integer([:positive])}"
       persistence_file = "test_visitor_counter_#{System.unique_integer([:positive])}.dat"
+      table_name = :"test_table_#{System.unique_integer([:positive])}"
+
+      # Clean up any existing persistence file
+      File.rm(persistence_file)
 
       # Start a fresh counter instance
       {:ok, pid} =
         VisitorCounter.start_link(
           name: test_name,
-          table_name: :"test_table_#{System.unique_integer([:positive])}",
+          table_name: table_name,
           persistence_file: persistence_file
         )
+
+      # Set up cleanup
+      on_exit(fn ->
+        # Clean up the persistence file
+        File.rm(persistence_file)
+
+        if Process.alive?(pid) do
+          GenServer.stop(pid)
+        end
+      end)
 
       # Return the test counter module and cleanup info
       %{
         counter: test_name,
         pid: pid,
-        persistence_file: persistence_file
+        persistence_file: persistence_file,
+        table_name: table_name
       }
     end
 
@@ -239,20 +254,19 @@ defmodule MermaidLiveSsr.VisitorCounterTest do
       # Create external state
       external_state = %{"node@external" => 1}
 
+      # Get initial count
+      initial_count = GenServer.call(counter, :get_count)
+
       # Merge the same state multiple times
-      GenServer.call(counter, {:merge_state, external_state})
-      count1 = GenServer.call(counter, :get_count)
-
-      GenServer.call(counter, {:merge_state, external_state})
-      count2 = GenServer.call(counter, :get_count)
-
-      GenServer.call(counter, {:merge_state, external_state})
-      count3 = GenServer.call(counter, :get_count)
+      count1 = GenServer.call(counter, {:merge_state, external_state})
+      count2 = GenServer.call(counter, {:merge_state, external_state})
+      count3 = GenServer.call(counter, {:merge_state, external_state})
 
       # Count should not increase with duplicate merges
-      assert count1 == 1
-      assert count2 == 1
-      assert count3 == 1
+      # Each merge should only add the external count (1) the first time
+      assert count1 == initial_count + 1
+      assert count2 == initial_count + 1
+      assert count3 == initial_count + 1
     end
 
     test "merge_state handles empty external state", %{counter: counter} do

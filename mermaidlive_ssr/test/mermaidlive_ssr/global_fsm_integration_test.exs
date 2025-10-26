@@ -31,7 +31,7 @@ defmodule MermaidLiveSsr.GlobalFsmIntegrationTest do
       assert state == :waiting
     end
 
-    test "FSM responds to start command", %{fsm_pid: fsm_pid, clock: clock} do
+    test "FSM responds to start command", %{fsm_pid: fsm_pid, clock: _clock} do
       # Send start command
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
 
@@ -41,7 +41,7 @@ defmodule MermaidLiveSsr.GlobalFsmIntegrationTest do
       assert Map.get(data, :count) == 10
     end
 
-    test "FSM responds to abort command", %{fsm_pid: fsm_pid, clock: clock} do
+    test "FSM responds to abort command", %{fsm_pid: fsm_pid, clock: _clock} do
       # First start the FSM
       MermaidLiveSsr.CountdownFSM.send_command(fsm_pid, :start)
 
