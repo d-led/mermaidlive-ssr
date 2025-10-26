@@ -3,22 +3,22 @@ on:
   push:
     branches: [main]
     paths:
-      - 'lib/**'
-      - 'test/**'
-      - 'mix.exs'
-      - 'mix.lock'
+      - 'mermaidlive_ssr/lib/**'
+      - 'mermaidlive_ssr/test/**'
+      - 'mermaidlive_ssr/mix.exs'
+      - 'mermaidlive_ssr/mix.lock'
       - '.github/workflows/ci.yml'
-      - 'scripts/**'
+      - 'mermaidlive_ssr/scripts/**'
       - 'examples/**'
   pull_request:
     branches: [main]
     paths:
-      - 'lib/**'
-      - 'test/**'
-      - 'mix.exs'
-      - 'mix.lock'
+      - 'mermaidlive_ssr/lib/**'
+      - 'mermaidlive_ssr/test/**'
+      - 'mermaidlive_ssr/mix.exs'
+      - 'mermaidlive_ssr/mix.lock'
       - '.github/workflows/ci.yml'
-      - 'scripts/**'
+      - 'mermaidlive_ssr/scripts/**'
       - 'examples/**'
 
 jobs:
