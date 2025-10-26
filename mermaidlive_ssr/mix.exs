@@ -70,8 +70,8 @@ defmodule MermaidLiveSsr.MixProject do
       {:req, "~> 0.5.10"},
       {:delta_crdt, "~> 0.6.5"},
       {:lazy_html, ">= 0.1.0", only: :test},
-      {:gen_server_virtual_time, path: "../../gen_server_virtual_time"},
-      # {:gen_server_virtual_time, "~> 0.5.0-rc.3"},
+      # {:gen_server_virtual_time, path: "../../gen_server_virtual_time"},
+      {:gen_server_virtual_time, "~> 0.5.0-rc.4"},
       # Quality assurance dependencies
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
