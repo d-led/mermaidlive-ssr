@@ -3,6 +3,6 @@
     "pre-render": "./pre-render-one-svg"
   },
   "devDependencies": {
-    "@mermaid-js/mermaid-cli": "^11.4.0"
+    "@mermaid-js/mermaid-cli": "^11.12.0"
   }
 }
